@@ -19,10 +19,15 @@ export default function AuthCallback() {
     handled.current = true;
 
     (async () => {
-      if (code) {
-        await supabase.auth.exchangeCodeForSession(code);
+      try {
+        if (code) {
+          await supabase.auth.exchangeCodeForSession(code);
+        }
+      } catch (e) {
+        console.log('[AuthCallback] exchangeCodeForSession failed', e);
+      } finally {
+        router.replace('/');
       }
-      router.replace('/');
     })();
   }, [code]);
 
