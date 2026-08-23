@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Platform } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Platform, Image } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import { Download, ShieldCheck, Share as ShareIcon } from 'lucide-react-native';
 import { Share } from 'react-native';
@@ -75,11 +75,9 @@ export function InvoiceView({ invoice }: { invoice: Invoice }) {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.brand}>
-            <View style={styles.logo}>
-              <Text style={styles.logoText}>S</Text>
-            </View>
+            <Image source={require('@/assets/images/varlo-logo.png')} style={styles.logo} />
             <View>
-              <Text style={styles.brandName}>STYLE</Text>
+              <Text style={styles.brandName}>VARLO</Text>
               <Text style={styles.brandTag}>CLOTHING STORE</Text>
             </View>
           </View>
@@ -239,9 +237,8 @@ const styles = StyleSheet.create({
   brand: { flexDirection: 'row-reverse', alignItems: 'center', gap: spacing.sm },
   logo: {
     width: 48, height: 48, borderRadius: 14, backgroundColor: colors.neutral[950],
-    alignItems: 'center', justifyContent: 'center',
+    resizeMode: 'cover',
   },
-  logoText: { color: '#d4af37', fontSize: 22, fontWeight: '800' },
   brandName: { fontSize: 20, fontWeight: '800', letterSpacing: 2, color: colors.neutral[900] },
   brandTag: { fontSize: 10, letterSpacing: 1, color: colors.neutral[500] },
   docTitle: { fontSize: 16, fontWeight: '800', letterSpacing: 3, color: colors.neutral[900] },
