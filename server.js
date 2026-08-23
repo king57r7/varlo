@@ -71,7 +71,7 @@ function verifyToken(token) {
 }
 
 function isAuthenticated(req) {
-  const token = req.cookies.__style_auth;
+  const token = req.cookies.__varlo_auth;
   const payload = verifyToken(token);
   if (!payload) return false;
   return payload.email === AUTH_EMAIL && payload.exp > Date.now();
@@ -90,8 +90,8 @@ const LOGIN_PAGE = `<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Style — Admin Access</title>
-<link rel="icon" type="image/svg+xml" href="/style-logo.svg">
+<title>Varlo — Admin Access</title>
+<link rel="icon" type="image/png" href="/favicon.png">
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
@@ -114,6 +114,7 @@ body {
   box-shadow: 0 8px 60px rgba(212, 175, 55, 0.08);
 }
 .logo-wrap { text-align: center; margin-bottom: 36px; }
+.logo-img { width: 84px; height: 84px; border-radius: 20px; margin-bottom: 16px; box-shadow: 0 8px 30px rgba(212,175,55,0.15); }
 .logo {
   display: inline-block;
   font-size: 42px;
@@ -152,7 +153,8 @@ body {
 <body>
 <div class="container">
   <div class="logo-wrap">
-    <div class="logo">STYLE</div>
+    <img class="logo-img" src="/varlo-logo.png" alt="Varlo">
+    <div class="logo">VARLO</div>
     <div class="subtitle">Admin Access</div>
   </div>
   <form class="form" id="loginForm">
@@ -209,7 +211,7 @@ app.post('/__auth', express.json(), (req, res) => {
   }
   if (email === AUTH_EMAIL && password1 === AUTH_PASSWORD1 && password2 === AUTH_PASSWORD2) {
     const token = signToken({ email, exp: Date.now() + 1000 * 60 * 60 * 24 * 7 });
-    res.cookie('__style_auth', token, {
+    res.cookie('__varlo_auth', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
@@ -221,26 +223,16 @@ app.post('/__auth', express.json(), (req, res) => {
 });
 
 app.post('/__logout', (req, res) => {
-  res.clearCookie('__style_auth');
+  res.clearCookie('__varlo_auth');
   res.json({ ok: true });
 });
 
-// ─── SVG Assets ──────────────────────────────────────────────────────────────
-const LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
-  <defs>
-    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#f5d77a"/>
-      <stop offset="40%" stop-color="#d4af37"/>
-      <stop offset="60%" stop-color="#d4af37"/>
-      <stop offset="100%" stop-color="#b8860b"/>
-    </linearGradient>
-  </defs>
-  <rect width="64" height="64" rx="14" fill="#0a0a0a"/>
-  <text x="32" y="44" text-anchor="middle" font-family="Georgia, serif" font-size="38" font-weight="bold" fill="url(#g)">S</text>
-</svg>`;
+// ─── Logo / Favicon Assets ─────────────────────────────────────────────────────
+const VARLO_LOGO_PATH = path.join(__dirname, 'assets', 'images', 'varlo-logo.png');
+const VARLO_FAVICON_PATH = path.join(__dirname, 'assets', 'images', 'favicon.png');
 
-app.get('/style-logo.svg', (req, res) => { res.set('Content-Type', 'image/svg+xml'); res.send(LOGO_SVG); });
-app.get('/favicon.svg', (req, res) => { res.set('Content-Type', 'image/svg+xml'); res.send(LOGO_SVG); });
+app.get('/varlo-logo.png', (req, res) => { res.set('Content-Type', 'image/png'); res.sendFile(VARLO_LOGO_PATH); });
+app.get('/favicon.png', (req, res) => { res.set('Content-Type', 'image/png'); res.sendFile(VARLO_FAVICON_PATH); });
 
 // ─── Cloudinary Upload Endpoint ───────────────────────────────────────────────
 app.post('/api/upload', requireAdminAuth, (req, res, next) => {
@@ -255,7 +247,7 @@ app.post('/api/upload', requireAdminAuth, (req, res, next) => {
     try {
       const result = await new Promise((resolve, reject) => {
         const stream = cloudinary.uploader.upload_stream(
-          { resource_type: resourceType, folder: 'style-app', quality: 'auto', fetch_format: 'auto' },
+          { resource_type: resourceType, folder: 'varlo-app', quality: 'auto', fetch_format: 'auto' },
           (error, result) => error ? reject(error) : resolve(result)
         );
         stream.end(req.file.buffer);
@@ -497,13 +489,14 @@ function getAdminHtml() {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Style Admin</title>
-<link rel="icon" type="image/svg+xml" href="/style-logo.svg">
+<title>Varlo Admin</title>
+<link rel="icon" type="image/png" href="/favicon.png">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0a0a0a;color:#e5e5e5;display:flex;min-height:100vh;font-size:14px}
 .sidebar{width:220px;background:#111;border-right:1px solid #222;padding:24px 0;display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100}
-.sidebar-logo{padding:0 20px 24px;border-bottom:1px solid #222;margin-bottom:16px}
+.sidebar-logo{padding:0 20px 24px;border-bottom:1px solid #222;margin-bottom:16px;display:flex;align-items:center;gap:10px}
+.sidebar-logo img{width:36px;height:36px;border-radius:10px}
 .sidebar-logo .name{font-size:22px;font-weight:800;letter-spacing:4px;background:linear-gradient(135deg,#d4af37,#f5d77a,#b8860b);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
 .sidebar-logo .sub{font-size:10px;color:#555;letter-spacing:2px;text-transform:uppercase;margin-top:2px}
 nav a{display:flex;align-items:center;gap:10px;padding:11px 20px;color:#888;text-decoration:none;font-size:13px;font-weight:500;border-left:3px solid transparent;transition:all .15s;cursor:pointer}
@@ -582,8 +575,11 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
 <aside class="sidebar">
   <div class="sidebar-logo">
-    <div class="name">STYLE</div>
-    <div class="sub">Admin Panel</div>
+    <img src="/varlo-logo.png" alt="Varlo">
+    <div>
+      <div class="name">VARLO</div>
+      <div class="sub">Admin Panel</div>
+    </div>
   </div>
   <nav>
     <a href="#" onclick="showSection('dashboard')" id="nav-dashboard" class="active">
@@ -1513,10 +1509,10 @@ if (fs.existsSync(webBuildPath)) {
   });
 } else {
   app.get('*', (req, res) => {
-    res.send('<!DOCTYPE html><html><head><title>Style</title><link rel="icon" type="image/svg+xml" href="/style-logo.svg"></head><body style="background:#0a0a0a;color:#d4af37;font-family:sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;margin:0;gap:16px"><h1 style="font-size:48px;letter-spacing:8px;background:linear-gradient(135deg,#d4af37,#f5d77a,#b8860b);-webkit-background-clip:text;-webkit-text-fill-color:transparent">STYLE</h1><p style="color:#555">Web build not found. Run: npx expo export --platform web</p><a href="/admin-panel" style="color:#d4af37;text-decoration:none;border:1px solid rgba(212,175,55,.3);padding:10px 24px;border-radius:10px;font-size:14px">→ Go to Admin Panel</a></body></html>');
+    res.send('<!DOCTYPE html><html><head><title>Varlo</title><link rel="icon" type="image/png" href="/favicon.png"></head><body style="background:#0a0a0a;color:#d4af37;font-family:sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;margin:0;gap:16px"><img src="/varlo-logo.png" alt="Varlo" style="width:96px;height:96px;border-radius:22px;box-shadow:0 8px 30px rgba(212,175,55,.15)"><h1 style="font-size:48px;letter-spacing:8px;background:linear-gradient(135deg,#d4af37,#f5d77a,#b8860b);-webkit-background-clip:text;-webkit-text-fill-color:transparent">VARLO</h1><p style="color:#555">Web build not found. Run: npx expo export --platform web</p><a href="/admin-panel" style="color:#d4af37;text-decoration:none;border:1px solid rgba(212,175,55,.3);padding:10px 24px;border-radius:10px;font-size:14px">→ Go to Admin Panel</a></body></html>');
   });
 }
 
 app.listen(PORT, () => {
-  console.log('Style server running on port ' + PORT);
+  console.log('Varlo server running on port ' + PORT);
 });
