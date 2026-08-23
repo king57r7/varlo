@@ -109,9 +109,12 @@ export default function HomeScreen() {
 function Header() {
   return (
     <View style={styles.header}>
-      <View>
-        <Text style={styles.greeting}>Welcome</Text>
-        <Text style={styles.brandName}>STYLE</Text>
+      <View style={styles.brandRow}>
+        <Image source={require('@/assets/images/varlo-logo.png')} style={styles.brandLogo} />
+        <View>
+          <Text style={styles.greeting}>Welcome</Text>
+          <Text style={styles.brandName}>VARLO</Text>
+        </View>
       </View>
       <View style={styles.headerIcons}>
         <TouchableOpacity style={styles.iconBtn} onPress={() => router.push('/(tabs)/search')}>
@@ -293,6 +296,16 @@ const styles = StyleSheet.create({
   greeting: {
     ...typography.caption,
     color: colors.textMuted,
+  },
+  brandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  brandLogo: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
   },
   brandName: {
     ...typography.h3,
