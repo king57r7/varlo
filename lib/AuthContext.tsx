@@ -136,12 +136,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { error: null }; // المستخدم ألغى العملية، لا داعي لإظهار خطأ.
     }
 
-    const code = new URL(result.url).searchParams.get('code');
-    if (!code) {
-      return { error: 'تعذّر إكمال تسجيل الدخول عبر Google.' };
-    }
-    const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-    return { error: exchangeError?.message ?? null };
+    // ملاحظة: لا نستبدل الكود بجلسة هون. نظام التوجيه (deep link) رح يفتح
+    // صفحة /auth/callback تلقائياً وهي المسؤولة الوحيدة عن استبدال الكود،
+    // لأن الكود يُستخدم مرة واحدة فقط. onAuthStateChange رح يلتقط الجلسة
+    // تلقائياً لما تخلص تلك الصفحة عملها.
+    return { error: null };
   };
 
   const signOut = async () => {
