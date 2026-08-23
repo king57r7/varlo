@@ -64,47 +64,49 @@ jobs:
           NODE_ENV: production
 
       - name: Decode release keystore
-        run: |
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/release.keystore.jks
+        run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/release.keystore.jks
 
-      - name: Configure release signing
+      - name: Write signing patch script
         run: |
-          python3 - <<'EOF'
+          cat > /tmp/patch_signing.py << 'PYEOF'
           import re
 
           path = "android/app/build.gradle"
           with open(path) as f:
               content = f.read()
 
-          # Add a "release" signingConfig next to the existing "debug" one
-          release_config = '''        release {
-              storeFile file('release.keystore.jks')
-              storePassword System.getenv("ANDROID_STORE_PASSWORD")
-              keyAlias System.getenv("ANDROID_KEY_ALIAS")
-              keyPassword System.getenv("ANDROID_KEY_PASSWORD")
-          }
-      }
-  '''
+          lines = [
+              "        release {",
+              "            storeFile file('release.keystore.jks')",
+              "            storePassword System.getenv(\"ANDROID_STORE_PASSWORD\")",
+              "            keyAlias System.getenv(\"ANDROID_KEY_ALIAS\")",
+              "            keyPassword System.getenv(\"ANDROID_KEY_PASSWORD\")",
+              "        }",
+          ]
+          release_config = "\n".join(lines)
+
           content = re.sub(
-              r'(signingConfigs\s*\{\s*debug\s*\{[^}]*\}\s*)\}',
-              r'\1' + release_config.strip() + '\n  }',
+              r"(signingConfigs\s*\{\s*debug\s*\{[^}]*\}\s*)\}",
+              lambda m: m.group(1) + release_config + "\n    }",
               content,
-              count=1
+              count=1,
           )
 
-          # Point the release buildType at the new signingConfig
           content = re.sub(
-              r'(release\s*\{[^}]*?)signingConfig signingConfigs\.debug',
-              r'\1signingConfig signingConfigs.release',
+              r"(release\s*\{[^}]*?)signingConfig signingConfigs\.debug",
+              r"\1signingConfig signingConfigs.release",
               content,
-              count=1
+              count=1,
           )
 
           with open(path, "w") as f:
               f.write(content)
 
-          print("✅ build.gradle patched for release signing")
-          EOF
+          print("build.gradle patched for release signing")
+          PYEOF
+
+      - name: Configure release signing
+        run: python3 /tmp/patch_signing.py
 
       - name: Build AAB with Gradle
         run: |
@@ -126,10 +128,10 @@ jobs:
       - name: Check if AAB was created
         run: |
           if [ -f "android/app/build/outputs/bundle/release/app-release.aab" ]; then
-            echo "✅ AAB created successfully!"
+            echo "AAB created successfully!"
             ls -lh android/app/build/outputs/bundle/release/*.aab
           else
-            echo "❌ AAB creation failed!"
+            echo "AAB creation failed!"
             exit 1
           fi
 
