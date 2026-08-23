@@ -85,7 +85,7 @@ export function getSiteUrl(): string {
   if (Platform.OS === 'web' && typeof window !== 'undefined' && window.location?.origin) {
     return window.location.origin.replace(/\/+$/, '');
   }
-  return 'https://style.app';
+  return 'https://varlo.app';
 }
 
 /** The exact string encoded in the QR code. */
