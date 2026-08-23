@@ -55,7 +55,7 @@ const VOLUMES: Record<SoundName, number> = {
   addToCart: 0.45,
 };
 
-const STORAGE_KEY = '@style/sound_enabled';
+const STORAGE_KEY = '@varlo/sound_enabled';
 
 let enabled = true;
 let audioModeReady = false;
