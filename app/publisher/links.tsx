@@ -40,7 +40,7 @@ type AffiliateLinkWithProduct = AffiliateLink & {
 };
 
 // Production website URL — affiliate links point directly to the product page
-const WEBSITE_URL = 'https://web-production-5b87e.up.railway.app';
+const WEBSITE_URL = 'https://varlostore.com';
 
 export default function PublisherLinksScreen() {
   const { user, isPublisher } = useAuth();
