@@ -4,6 +4,7 @@ import {
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
+  Image,
 } from 'react-native';
 import { router } from 'expo-router';
 import {
@@ -54,7 +55,8 @@ export default function MenuScreen() {
       </View>
       <ScrollView contentContainerStyle={{ padding: spacing.md, gap: spacing.md }}>
         <View style={styles.brandCard}>
-          <Text style={styles.brandName}>STYLE</Text>
+          <Image source={require('@/assets/images/varlo-logo.png')} style={styles.brandLogo} />
+          <Text style={styles.brandName}>VARLO</Text>
           <Text style={styles.brandTagline}>Fashion for Everyone</Text>
         </View>
         <View style={styles.menuContainer}>
@@ -142,6 +144,12 @@ const styles = StyleSheet.create({
     gap: 4,
     borderWidth: 1,
     borderColor: '#d4af37',
+  },
+  brandLogo: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    marginBottom: 4,
   },
   brandName: {
     ...typography.h2,
