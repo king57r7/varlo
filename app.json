@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Style",
-    "slug": "style",
+    "name": "Varlo",
+    "slug": "varlo",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "style",
+    "scheme": "varlo",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
@@ -15,7 +15,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.style.app",
+      "bundleIdentifier": "com.varlo.app",
       "config": {
         "google": {
           "reservedClientId": "YOUR_GOOGLE_CLIENT_ID_HERE"
@@ -23,11 +23,11 @@
       }
     },
     "android": {
-      "package": "com.style.app",
+      "package": "com.varlo.app",
       "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
-        "backgroundColor": "#d4af37"
+        "backgroundColor": "#0a0a0a"
       },
       "permissions": ["INTERNET"]
     },
