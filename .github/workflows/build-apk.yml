@@ -65,8 +65,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          echo "📦 Installing dependencies with npm ci..."
-          npm ci --legacy-peer-deps
+          echo "📦 Installing dependencies with npm install..."
+          npm install --legacy-peer-deps
 
       - name: Clean npm cache
         run: |
@@ -161,7 +161,7 @@ jobs:
       - name: Install dependencies
         run: |
           echo "📦 Installing dependencies..."
-          npm ci --legacy-peer-deps
+          npm install --legacy-peer-deps
 
       - name: Clean npm cache
         run: npm cache clean --force
