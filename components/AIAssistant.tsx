@@ -34,7 +34,7 @@ import {
   type AIPublicConfig,
 } from '@/lib/ai';
 
-const HIDE_KEY = '@style/ai_assistant_hidden';
+const HIDE_KEY = '@varlo/ai_assistant_hidden';
 
 /** إخفاء/إظهار المساعد من أي مكان في التطبيق. */
 export async function setAIAssistantHidden(hidden: boolean) {
@@ -202,7 +202,7 @@ export function AIAssistant() {
 
   const welcome =
     config?.welcome_text?.trim() ||
-    'أهلاً بك في Style 👋 أنا مساعدك الذكي. اسألني عن أي منتج أو سعر أو خطوة داخل المتجر.';
+    'أهلاً بك في Varlo 👋 أنا مساعدك الذكي. اسألني عن أي منتج أو سعر أو خطوة داخل المتجر.';
 
   const send = async (text?: string) => {
     const content = (text ?? input).trim();
