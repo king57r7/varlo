@@ -75,7 +75,7 @@ export default function SignupScreen() {
           </View>
           <View style={styles.content}>
             <Text style={styles.title}>Create Account</Text>
-            <Text style={styles.subtitle}>Join STYLE for the best shopping experience</Text>
+            <Text style={styles.subtitle}>Join VARLO for the best shopping experience</Text>
 
             <Text style={styles.sectionLabel}>Account Type</Text>
             <View style={styles.accountTypeRow}>
