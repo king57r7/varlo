@@ -25,7 +25,7 @@ Deno.serve(async (req: Request) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? Deno.env.get("SUPABASE_ANON_KEY") ?? "";
     // SITE_URL is the app's public URL (Railway). Falls back to hardcoded production URL.
-    const siteUrl = (Deno.env.get("SITE_URL") ?? "https://web-production-5b87e.up.railway.app").replace(/\/$/, "");
+    const siteUrl = (Deno.env.get("SITE_URL") ?? "https://varlostore.com").replace(/\/$/, "");
 
     // Look up the affiliate link by code
     const linkRes = await fetch(
