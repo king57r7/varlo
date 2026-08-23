@@ -167,9 +167,9 @@ export async function buildInvoiceHtml(invoice: Invoice, exchangeRate?: number):
 <div class="sheet">
   <div class="top">
     <div class="brand">
-      <div class="logo">S</div>
+      <div class="logo">V</div>
       <div>
-        <div class="bname">STYLE</div>
+        <div class="bname">VARLO</div>
         <div class="btag">CLOTHING STORE</div>
       </div>
     </div>
