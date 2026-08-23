@@ -14,7 +14,7 @@ import {
 import { router, useLocalSearchParams } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const WEBSITE_URL = 'https://web-production-5b87e.up.railway.app';
+const WEBSITE_URL = 'https://varlostore.com';
 import {
   ChevronLeft,
   Heart,
