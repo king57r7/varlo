@@ -40,7 +40,7 @@ export default function AccountScreen() {
         </View>
         <View style={styles.signInPrompt}>
           <User size={64} color={colors.neutral[300]} />
-          <Text style={styles.signInTitle}>Welcome to STYLE</Text>
+          <Text style={styles.signInTitle}>Welcome to VARLO</Text>
           <Text style={styles.signInMsg}>Sign in to access your account, orders, and wishlist</Text>
           <TouchableOpacity
             style={styles.signInBtn}
