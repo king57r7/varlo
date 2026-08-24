@@ -1,6 +1,7 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { I18nManager, View } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { AuthProvider } from '@/lib/AuthContext';
 import { CartProvider } from '@/lib/CartContext';
@@ -16,6 +17,7 @@ export default function RootLayout() {
   useFrameworkReady();
 
   return (
+    <SafeAreaProvider>
     <View style={{ flex: 1, direction: 'rtl' }}>
       <ErrorBoundary>
       <AuthProvider>
@@ -34,5 +36,6 @@ export default function RootLayout() {
       </AuthProvider>
       </ErrorBoundary>
     </View>
+    </SafeAreaProvider>
   );
 }
