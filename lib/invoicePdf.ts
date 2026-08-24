@@ -37,14 +37,11 @@ async function qrDataUrl(text: string): Promise<string> {
   }
 }
 
-export async function buildInvoiceHtml(invoice: Invoice, exchangeRate?: number): Promise<string> {
+export async function buildInvoiceHtml(invoice: Invoice): Promise<string> {
   const url = buildInvoiceUrl(invoice.token);
   const qr = await qrDataUrl(url);
   const isOrder = invoice.kind === 'order';
   const t = invoice.totals ?? { total: 0 };
-  // نُفضّل دائماً سعر الصرف المجمّد المخزّن مع الفاتورة نفسها (totals.exchange_rate)
-  // على أي سعر حيّ يُمرَّر من الخارج، حتى لا تتغيّر أرقام فاتورة صادرة مسبقاً.
-  exchangeRate = Number(t.exchange_rate) || exchangeRate || 130;
 
   const paidAmount = Number(t.paid ?? t.upfront ?? 0);
   const remainingAmount = Number(t.remaining ?? 0);
@@ -76,18 +73,18 @@ export async function buildInvoiceHtml(invoice: Invoice, exchangeRate?: number):
           }
         </td>
         <td class="c">${esc(item.quantity)}</td>
-        <td class="c">${esc(money(item.unit_price, exchangeRate))}</td>
-        <td class="c strong">${esc(money(item.subtotal, exchangeRate))}</td>
+        <td class="c">${esc(money(item.unit_price))}</td>
+        <td class="c strong">${esc(money(item.subtotal))}</td>
       </tr>`
     )
     .join('');
 
   const totalsRows = isOrder
     ? [
-        ['المجموع الفرعي', money(t.subtotal, exchangeRate)],
-        ['الشحن', money(t.shipping_cost, exchangeRate)],
-        ['الضريبة', money(t.tax, exchangeRate)],
-        ...(Number(t.discount ?? 0) > 0 ? [['الخصم', `- ${money(t.discount, exchangeRate)}`]] : []),
+        ['المجموع الفرعي', money(t.subtotal)],
+        ['الشحن', money(t.shipping_cost)],
+        ['الضريبة', money(t.tax)],
+        ...(Number(t.discount ?? 0) > 0 ? [['الخصم', `- ${money(t.discount)}`]] : []),
       ]
     : [];
 
@@ -295,15 +292,15 @@ export async function buildInvoiceHtml(invoice: Invoice, exchangeRate?: number):
         )
         .join('')}
       <div class="line grand"><span>${isOrder ? 'الإجمالي' : 'مبلغ السحب'}</span><span>${esc(
-    money(t.total ?? t.amount, exchangeRate)
+    money(t.total ?? t.amount)
   )}</span></div>
       ${
         isOrder && (paidAmount > 0 || remainingAmount > 0)
           ? `<div class="line split"><span>${esc(
               upfrontPct > 0 ? `تم دفع مبلغ (${upfrontPct}%)` : 'تم دفع مبلغ'
-            )}</span><span>${esc(money(paidAmount, exchangeRate))}</span></div>
+            )}</span><span>${esc(money(paidAmount))}</span></div>
              <div class="line split"><span>المتبقي عند الاستلام</span><span>${esc(
-               money(remainingAmount, exchangeRate)
+               money(remainingAmount)
              )}</span></div>`
           : ''
       }
@@ -328,8 +325,8 @@ export async function buildInvoiceHtml(invoice: Invoice, exchangeRate?: number):
 }
 
 /** Download / share the invoice as a professional PDF. */
-export async function downloadInvoicePdf(invoice: Invoice, exchangeRate?: number): Promise<void> {
-  const html = await buildInvoiceHtml(invoice, exchangeRate);
+export async function downloadInvoicePdf(invoice: Invoice): Promise<void> {
+  const html = await buildInvoiceHtml(invoice);
   const filename = `${invoice.invoice_number ?? invoice.token}.pdf`;
 
   if (Platform.OS === 'web') {
