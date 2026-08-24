@@ -177,7 +177,7 @@ export default function AdminDashboardScreen() {
   }
 
   const fmt = (v: string | undefined) =>
-    v ? `$${Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—';
+    v ? `${Math.round(Number(v)).toLocaleString('en-US')} ل.س` : '—';
 
   // Revenue highlight cards
   const revenueCards = [
