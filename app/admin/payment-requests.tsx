@@ -31,7 +31,7 @@ import { ArabicText as Text, ArabicTextInput as TextInput } from '@/components/A
 import { useAuth } from '@/lib/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/Button';
-import { getExchangeRate, convertToSypSync, convertSypToUsdSync, formatSyp } from '@/lib/currency';
+import { formatSyp } from '@/lib/currency';
 
 type TopupRequest = {
   id: string;
@@ -40,7 +40,6 @@ type TopupRequest = {
   method_name: string;
   method_account: string | null;
   amount: number;
-  currency: 'SYP' | 'USD';
   transfer_reference: string | null;
   receipt_url: string | null;
   sender_name: string | null;
@@ -77,7 +76,6 @@ export default function AdminPaymentRequestsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>('pending');
-  const [exchangeRate, setExchangeRate] = useState(130);
 
   // Review modal
   const [target, setTarget] = useState<TopupRequest | null>(null);
@@ -122,11 +120,6 @@ export default function AdminPaymentRequestsScreen() {
     load().finally(() => setLoading(false));
   }, [load]);
 
-  // تحميل سعر الصرف لعرض وإدخال المبالغ بالليرة السورية
-  useEffect(() => {
-    getExchangeRate().then(setExchangeRate).catch(() => setExchangeRate(130));
-  }, []);
-
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await load();
@@ -148,11 +141,8 @@ export default function AdminPaymentRequestsScreen() {
   const openApprove = (r: TopupRequest) => {
     setTarget(r);
     setMode('approve');
-    // تعبئة المبلغ الافتراضي بالليرة السورية دائماً (نفس مبلغ طلب العميل)
-    const defaultSyp =
-      r.currency === 'USD'
-        ? convertToSypSync(Number(r.amount), exchangeRate)
-        : Number(r.amount);
+    // تعبئة المبلغ الافتراضي بالليرة السورية (نفس مبلغ طلب العميل)
+    const defaultSyp = Number(r.amount);
     setCreditAmount(defaultSyp ? String(defaultSyp) : '');
     setAdminNote('');
     setModalError(null);
@@ -176,22 +166,17 @@ export default function AdminPaymentRequestsScreen() {
 
   const handleApprove = async () => {
     if (!target) return;
-    // الأدمن يدخل المبلغ بالليرة السورية، ونحوّله للدولار قبل تخزينه (الرصيد داخلياً بالدولار)
+    // الأدمن يدخل المبلغ بالليرة السورية مباشرة — هذا هو المبلغ الذي يُضاف للمحفظة كما هو.
     const valueSyp = parseFloat(creditAmount.replace(',', '.'));
     if (!valueSyp || valueSyp <= 0 || Number.isNaN(valueSyp)) {
       setModalError('يرجى إدخال المبلغ بالليرة السورية');
-      return;
-    }
-    const valueUsd = convertSypToUsdSync(valueSyp, exchangeRate);
-    if (!valueUsd || valueUsd <= 0) {
-      setModalError('تعذّر تحويل المبلغ، تحقق من سعر الصرف');
       return;
     }
     setSaving(true);
     try {
       const { error: rpcErr } = await supabase.rpc('approve_wallet_topup', {
         p_request_id: target.id,
-        p_amount_usd: valueUsd,
+        p_amount_usd: valueSyp,
         p_admin_note: adminNote.trim() || null,
       });
       if (rpcErr) throw rpcErr;
@@ -323,8 +308,7 @@ export default function AdminPaymentRequestsScreen() {
                     <View style={{ flex: 1 }}>
                       <Text style={styles.cardMethod}>{r.method_name}</Text>
                       <Text style={styles.cardAmount}>
-                        {Number(r.amount).toLocaleString('en-US')}{' '}
-                        {r.currency === 'USD' ? 'USD' : 'ل.س'}
+                        {formatSyp(Number(r.amount))}
                       </Text>
                     </View>
                     <View style={[styles.statusTag, { backgroundColor: meta.bg }]}>
@@ -377,7 +361,7 @@ export default function AdminPaymentRequestsScreen() {
 
                   {r.status === 'approved' ? (
                     <Text style={[styles.resultText, { color: colors.success[700] }]}>
-                      تم شحن المحفظة بمبلغ {formatSyp(convertToSypSync(Number(r.credited_amount ?? 0), exchangeRate))}
+                      تم شحن المحفظة بمبلغ {formatSyp(Number(r.credited_amount ?? 0))}
                       {r.admin_note ? ` — ملاحظة: ${r.admin_note}` : ''}
                     </Text>
                   ) : null}
@@ -420,8 +404,7 @@ export default function AdminPaymentRequestsScreen() {
             {target ? (
               <View style={styles.summaryBox}>
                 <Text style={styles.summaryText}>
-                  {target.method_name} — {Number(target.amount).toLocaleString('en-US')}{' '}
-                  {target.currency === 'USD' ? 'USD' : 'ل.س'}
+                  {target.method_name} — {formatSyp(Number(target.amount))}
                 </Text>
                 {target.transfer_reference ? (
                   <Text style={styles.summaryMeta}>رقم العملية: {target.transfer_reference}</Text>
@@ -442,13 +425,6 @@ export default function AdminPaymentRequestsScreen() {
                     placeholderTextColor={colors.textMuted}
                   />
                 </View>
-                {creditAmount && !Number.isNaN(parseFloat(creditAmount.replace(',', '.'))) ? (
-                  <Text style={styles.hintText}>
-                    ≈ {convertSypToUsdSync(parseFloat(creditAmount.replace(',', '.')), exchangeRate).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $
-                    {' '}(بسعر صرف {exchangeRate.toLocaleString('en-US')} ل.س)
-                  </Text>
-                ) : null}
-
                 <Text style={styles.label}>ملاحظة للعميل (اختياري)</Text>
                 <View style={styles.inputWrap}>
                   <TextInput
