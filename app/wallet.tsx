@@ -224,7 +224,7 @@ export default function CustomerWalletScreen() {
     setFormError(null);
     try {
       setUploading(true);
-      const uri = await pickImage();
+      const uri = await pickImage(false);
       if (!uri) return;
       const uploaded = await uploadToCloudinary(uri, 'image');
       setReceiptUrl(uploaded.secure_url);
