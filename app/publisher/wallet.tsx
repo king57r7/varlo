@@ -52,7 +52,7 @@ const PAYMENT_METHODS: { value: PaymentMethod; label: string; icon: React.ReactN
   },
 ];
 
-const MIN_THRESHOLD = 5;
+const MIN_THRESHOLD = 1000; // ل.س — الحد الأدنى لعتبة السحب
 
 export default function PublisherWithdrawalSettingsScreen() {
   const { user, isPublisher } = useAuth();
@@ -129,7 +129,7 @@ export default function PublisherWithdrawalSettingsScreen() {
   }, [load]);
 
   const fmtMoney = (n: number) =>
-    `$${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    `${Math.round(Number(n || 0)).toLocaleString('en-US')} ل.س`;
 
   const buildAccountDetails = (): Record<string, string> => {
     if (method === 'bank') {
@@ -149,7 +149,7 @@ export default function PublisherWithdrawalSettingsScreen() {
 
     const thresholdNum = parseFloat(threshold);
     if (isNaN(thresholdNum) || thresholdNum <= MIN_THRESHOLD) {
-      const msg = `يجب أن يكون الحد الأدنى للسحب أكبر من $${MIN_THRESHOLD}.00. الرجاء إدخال مبلغ أعلى.`;
+      const msg = `يجب أن يكون الحد الأدنى للسحب أكبر من ${MIN_THRESHOLD.toLocaleString('en-US')} ل.س. الرجاء إدخال مبلغ أعلى.`;
       setFormError(msg);
       Alert.alert('Invalid Threshold', msg);
       return;
@@ -342,14 +342,14 @@ export default function PublisherWithdrawalSettingsScreen() {
             </View>
 
             {/* Minimum threshold */}
-            <Text style={styles.fieldLabel}>Minimum Threshold ($) *</Text>
+            <Text style={styles.fieldLabel}>Minimum Threshold (ل.س) *</Text>
             <Text style={styles.fieldHint}>
-              Must be greater than ${MIN_THRESHOLD}.00. Admin will process payment once your balance
+              Must be greater than {MIN_THRESHOLD.toLocaleString('en-US')} SYP. Admin will process payment once your balance
               reaches this amount.
             </Text>
             <TextInputArabic
               style={[styles.input, formError && styles.inputError]}
-              placeholder={`e.g. 50.00 (minimum > $${MIN_THRESHOLD})`}
+              placeholder={`e.g. 50000 (minimum > ${MIN_THRESHOLD})`}
               value={threshold}
               onChangeText={(v) => {
                 setThreshold(v);
