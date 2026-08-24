@@ -44,8 +44,6 @@ export type InvoiceTotals = {
   /** نسبة الدفعة المقدمة المعتمدة وقت إنشاء الطلب */
   upfront_percentage?: number;
   amount?: number;
-  /** سعر الصرف المجمّد وقت إصدار الفاتورة — لا يتغيّر بعدها أبداً */
-  exchange_rate?: number;
 };
 
 export type Invoice = {
@@ -125,9 +123,8 @@ export async function fetchInvoiceByToken(token: string): Promise<Invoice | null
 /**
  * تنسيق مبلغ الفاتورة بالليرة السورية (المبلغ الأصلي مخزّن بالدولار).
  */
-export function money(value: number | null | undefined, exchangeRate: number = 130): string {
-  const usd = Number(value ?? 0);
-  const syp = Math.round(usd * exchangeRate);
+export function money(value: number | null | undefined): string {
+  const syp = Math.round(Number(value ?? 0));
   return `${syp.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} ل.س`;
 }
 
