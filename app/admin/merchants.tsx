@@ -197,9 +197,9 @@ export default function AdminMerchantsScreen() {
         m.email,
         m.product_count,
         m.order_count,
-        `$${Number(m.total_sales).toFixed(2)}`,
-        `$${Number(m.total_earnings).toFixed(2)}`,
-        `$${Number(m.available_balance).toFixed(2)}`,
+        `${Math.round(Number(m.total_sales)).toLocaleString('en-US')} ل.س`,
+        `${Math.round(Number(m.total_earnings)).toLocaleString('en-US')} ل.س`,
+        `${Math.round(Number(m.available_balance)).toLocaleString('en-US')} ل.س`,
       ]);
       const html = buildHTMLTable(
         'Merchants Report',
@@ -225,7 +225,7 @@ export default function AdminMerchantsScreen() {
     return true;
   });
 
-  const fmt = (v: string) => `$${Number(v || 0).toFixed(2)}`;
+  const fmt = (v: string) => `${Math.round(Number(v || 0)).toLocaleString('en-US')} ل.س`;
   const fmtDate = (d: string) => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
   const topSellers = [...merchants].sort((a, b) => parseFloat(b.total_sales) - parseFloat(a.total_sales)).slice(0, 3);
