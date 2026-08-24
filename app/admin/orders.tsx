@@ -258,7 +258,7 @@ export default function AdminOrdersScreen() {
     setMinTotal(''); setMaxTotal(''); setDateFrom(''); setDateTo(''); setSearch('');
   };
 
-  const fmt = (v: string) => `$${Number(v || 0).toFixed(2)}`;
+  const fmt = (v: string) => `${Math.round(Number(v || 0)).toLocaleString('en-US')} ل.س`;
   const fmtDate = (d: string) => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
   const openDetail = (order: Order) => {
@@ -439,7 +439,7 @@ export default function AdminOrdersScreen() {
             <View style={styles.advRow}>
               <View style={styles.advStat}><Text style={styles.advStatValue}>{filteredOrders.length}</Text><Text style={styles.advLabel}>طلب معروض</Text></View>
               <View style={styles.advStat}>
-                <Text style={styles.advStatValue}>{`$${filteredOrders.reduce((sum, o) => sum + Number(o.total || 0), 0).toFixed(2)}`}</Text>
+                <Text style={styles.advStatValue}>{`${Math.round(filteredOrders.reduce((sum, o) => sum + Number(o.total || 0), 0)).toLocaleString('en-US')} ل.س`}</Text>
                 <Text style={styles.advLabel}>إجمالي المبالغ</Text>
               </View>
             </View>
