@@ -40,7 +40,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { Button } from '@/components/Button';
 import { ArabicText as Text, ArabicTextInput as TextInput } from '@/components/ArabicText';
 import { pickImage, uploadToCloudinary } from '@/lib/cloudinary';
-import { convertToSypSync, formatSyp } from '@/lib/currency';
+import { formatSyp } from '@/lib/currency';
 
 type WalletData = {
   id: string;
@@ -48,8 +48,6 @@ type WalletData = {
   pending_balance: number;
   total_earned: number;
   total_withdrawn: number;
-  /** سعر الصرف المجمّد وقت إنشاء المحفظة — لا يتأثر بتغيير سعر الصرف من لوحة الأدمن */
-  wallet_exchange_rate: number | null;
 };
 
 type Transaction = {
@@ -70,7 +68,6 @@ type PaymentMethod = {
   account_name: string | null;
   account_number: string | null;
   extra_info: string | null;
-  currency: 'SYP' | 'USD' | 'both';
   logo_url: string | null;
   min_amount: number | null;
   max_amount: number | null;
@@ -82,7 +79,6 @@ type TopupRequest = {
   id: string;
   method_name: string;
   amount: number;
-  currency: 'SYP' | 'USD';
   transfer_reference: string | null;
   receipt_url: string | null;
   status: 'pending' | 'approved' | 'rejected';
@@ -115,16 +111,12 @@ export default function CustomerWalletScreen() {
   const [requests, setRequests] = useState<TopupRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  // سعر الصرف المستخدم لعرض رصيد المحفظة هو السعر المجمّد المخزّن مع
-  // المحفظة نفسها وقت إنشائها — لا يتغيّر إذا بدّل الأدمن سعر الصرف لاحقاً.
-  const exchangeRate = Number(wallet?.wallet_exchange_rate) || 130;
 
   // Top-up flow state
   const [showTopUp, setShowTopUp] = useState(false);
   const [step, setStep] = useState<Step>('methods');
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(null);
   const [amount, setAmount] = useState('');
-  const [currency, setCurrency] = useState<'SYP' | 'USD'>('SYP');
   const [reference, setReference] = useState('');
   const [senderName, setSenderName] = useState('');
   const [customerNote, setCustomerNote] = useState('');
@@ -192,7 +184,6 @@ export default function CustomerWalletScreen() {
     setStep('methods');
     setSelectedMethod(null);
     setAmount('');
-    setCurrency('SYP');
     setReference('');
     setSenderName('');
     setCustomerNote('');
@@ -213,7 +204,6 @@ export default function CustomerWalletScreen() {
 
   const chooseMethod = (m: PaymentMethod) => {
     setSelectedMethod(m);
-    setCurrency(m.currency === 'USD' ? 'USD' : 'SYP');
     setStep('instructions');
   };
 
@@ -293,7 +283,7 @@ export default function CustomerWalletScreen() {
         method_name: selectedMethod.name,
         method_account: selectedMethod.account_number,
         amount: value,
-        currency,
+        currency: 'SYP',
         transfer_reference: reference.trim() || null,
         receipt_url: receiptUrl,
         sender_name: senderName.trim() || null,
@@ -378,12 +368,12 @@ export default function CustomerWalletScreen() {
             <Text style={styles.balanceTitle}>Available Balance</Text>
           </View>
           <Text style={styles.balanceAmount}>
-            {formatSyp(convertToSypSync(wallet?.available_balance ?? 0, exchangeRate))}
+            {formatSyp(wallet?.available_balance ?? 0)}
           </Text>
           <View style={styles.balanceSubRow}>
             <View style={styles.balanceSubItem}>
               <Text style={styles.balanceSubLabel}>Pending</Text>
-              <Text style={styles.balanceSubValue}>{formatSyp(convertToSypSync(wallet?.pending_balance ?? 0, exchangeRate))}</Text>
+              <Text style={styles.balanceSubValue}>{formatSyp(wallet?.pending_balance ?? 0)}</Text>
             </View>
             <View style={styles.balanceSubItem}>
               <Text style={styles.balanceSubLabel}>طلبات شحن قيد المراجعة</Text>
@@ -418,14 +408,14 @@ export default function CustomerWalletScreen() {
                     </View>
                   </View>
                   <Text style={styles.reqAmount}>
-                    {r.amount.toLocaleString('en-US')} {r.currency === 'USD' ? 'USD' : 'ل.س'}
+                    {formatSyp(r.amount)}
                   </Text>
                   {r.transfer_reference ? (
                     <Text style={styles.reqMeta}>رقم العملية: {r.transfer_reference}</Text>
                   ) : null}
                   {r.status === 'approved' && r.credited_amount != null ? (
                     <Text style={[styles.reqMeta, { color: colors.success[700] }]}>
-                      تم إضافة {formatSyp(convertToSypSync(Number(r.credited_amount), exchangeRate))} إلى محفظتك
+                      تم إضافة {formatSyp(Number(r.credited_amount))} إلى محفظتك
                     </Text>
                   ) : null}
                   {r.admin_note ? <Text style={styles.reqMeta}>ملاحظة الإدارة: {r.admin_note}</Text> : null}
@@ -485,7 +475,7 @@ export default function CustomerWalletScreen() {
                       styles.txAmount,
                       { color: isCredit(item.type) ? colors.success[700] : colors.error[500] },
                     ]}>
-                      {isCredit(item.type) ? '+' : '-'}{formatSyp(convertToSypSync(Number(item.amount), exchangeRate))}
+                      {isCredit(item.type) ? '+' : '-'}{formatSyp(Number(item.amount))}
                     </Text>
                   </View>
                 </View>
@@ -620,25 +610,7 @@ export default function CustomerWalletScreen() {
                     />
                   </View>
 
-                  {selectedMethod.currency === 'both' ? (
-                    <View style={styles.currencyRow}>
-                      {(['SYP', 'USD'] as const).map((c) => (
-                        <TouchableOpacity
-                          key={c}
-                          style={[styles.currencyChip, currency === c && styles.currencyChipActive]}
-                          onPress={() => setCurrency(c)}
-                        >
-                          <Text style={[styles.currencyChipText, currency === c && styles.currencyChipTextActive]}>
-                            {c === 'SYP' ? 'ليرة سورية' : 'دولار أمريكي'}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  ) : (
-                    <Text style={styles.hintText}>
-                      العملة: {selectedMethod.currency === 'USD' ? 'دولار أمريكي' : 'ليرة سورية'}
-                    </Text>
-                  )}
+                  <Text style={styles.hintText}>العملة: ليرة سورية</Text>
 
                   <Text style={styles.label}>رقم عملية التحويل</Text>
                   <View style={styles.customAmountRow}>
