@@ -29,11 +29,6 @@ export function InvoiceView({ invoice }: { invoice: Invoice }) {
   const isOrder = invoice.kind === 'order';
   const t = invoice.totals ?? { total: 0 };
 
-  // سعر الصرف المستخدم في هذه الفاتورة هو السعر المجمّد وقت إصدارها
-  // (يأتي من الخادم ضمن totals.exchange_rate) — لا نقرأ سعر الصرف الحيّ
-  // من لوحة الأدمن هنا حتى لا تتغيّر أرقام فاتورة صادرة مسبقاً.
-  const exchangeRate = Number(t.exchange_rate) || 130;
-
   useEffect(() => {
     setUrl(buildInvoiceUrl(invoice.token));
   }, [invoice.token]);
@@ -55,7 +50,7 @@ export function InvoiceView({ invoice }: { invoice: Invoice }) {
   const handleDownload = async () => {
     setBusy(true);
     try {
-      await downloadInvoicePdf(invoice, exchangeRate);
+      await downloadInvoicePdf(invoice);
     } finally {
       setBusy(false);
     }
@@ -143,10 +138,10 @@ export function InvoiceView({ invoice }: { invoice: Invoice }) {
                     </Text>
                   )}
                   <Text style={styles.itemMeta}>
-                    {item.quantity} × {money(item.unit_price, exchangeRate)}
+                    {item.quantity} × {money(item.unit_price)}
                   </Text>
                 </View>
-                <Text style={styles.itemTotal}>{money(item.subtotal, exchangeRate)}</Text>
+                <Text style={styles.itemTotal}>{money(item.subtotal)}</Text>
               </View>
             ))}
             {(invoice.items ?? []).length === 0 && <Text style={styles.itemMeta}>لا توجد أصناف</Text>}
@@ -158,24 +153,24 @@ export function InvoiceView({ invoice }: { invoice: Invoice }) {
           <Text style={styles.cardTitle}>الحساب</Text>
           {isOrder && (
             <>
-              <Row label="المجموع الفرعي" value={money(t.subtotal, exchangeRate)} />
-              <Row label="الشحن" value={money(t.shipping_cost, exchangeRate)} />
-              <Row label="الضريبة" value={money(t.tax, exchangeRate)} />
-              {Number(t.discount ?? 0) > 0 && <Row label="الخصم" value={`- ${money(t.discount, exchangeRate)}`} />}
+              <Row label="المجموع الفرعي" value={money(t.subtotal)} />
+              <Row label="الشحن" value={money(t.shipping_cost)} />
+              <Row label="الضريبة" value={money(t.tax)} />
+              {Number(t.discount ?? 0) > 0 && <Row label="الخصم" value={`- ${money(t.discount)}`} />}
             </>
           )}
           <View style={styles.grand}>
             <Text style={styles.grandLabel}>{isOrder ? 'الإجمالي' : 'مبلغ السحب'}</Text>
-            <Text style={styles.grandValue}>{money(t.total ?? t.amount, exchangeRate)}</Text>
+            <Text style={styles.grandValue}>{money(t.total ?? t.amount)}</Text>
           </View>
           {isOrder && (paidAmount > 0 || remainingAmount > 0) && (
             <>
               <View style={styles.paidBox}>
-                <Text style={styles.paidLabel}>{`تم دفع مبلغ ${money(paidAmount, exchangeRate)}`}</Text>
-                <Text style={styles.dueLabel}>{`المتبقي ${money(remainingAmount, exchangeRate)} يُدفع عند الاستلام`}</Text>
+                <Text style={styles.paidLabel}>{`تم دفع مبلغ ${money(paidAmount)}`}</Text>
+                <Text style={styles.dueLabel}>{`المتبقي ${money(remainingAmount)} يُدفع عند الاستلام`}</Text>
               </View>
-              <Row label={paidLabel} value={money(paidAmount, exchangeRate)} />
-              <Row label="المتبقي عند الاستلام" value={money(remainingAmount, exchangeRate)} />
+              <Row label={paidLabel} value={money(paidAmount)} />
+              <Row label="المتبقي عند الاستلام" value={money(remainingAmount)} />
             </>
           )}
         </View>
