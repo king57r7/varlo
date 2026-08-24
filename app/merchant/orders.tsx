@@ -337,8 +337,8 @@ export default function MerchantOrdersScreen() {
           o?.customer?.full_name ?? 'N/A',
           item.product_name,
           item.quantity,
-          `$${Number(item.unit_price || 0).toFixed(2)}`,
-          `$${Number(item.merchant_earnings || 0).toFixed(2)}`,
+          `${Math.round(Number(item.unit_price || 0)).toLocaleString('en-US')} ل.س`,
+          `${Math.round(Number(item.merchant_earnings || 0)).toLocaleString('en-US')} ل.س`,
         ];
       });
       const totalEarnings = filteredItems.reduce((sum, i) => sum + (i.merchant_earnings ?? 0), 0);
@@ -351,7 +351,7 @@ export default function MerchantOrdersScreen() {
       <div style="margin-top:24px">
         <div class="summary-card">
           <div class="label">Total Sales</div>
-          <div class="value">$${totalEarnings.toFixed(2)}</div>
+          <div class="value">${Math.round(totalEarnings).toLocaleString('en-US')} ل.س</div>
         </div>
       </div>`;
       await exportPDF(html, 'Merchant Orders Report');
@@ -363,7 +363,7 @@ export default function MerchantOrdersScreen() {
   }, [filteredItems]);
 
   const fmtMoney = (n: number) =>
-    `$${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    `${Math.round(Number(n || 0)).toLocaleString('en-US')} ل.س`;
 
   const fmtDate = (d: string) =>
     new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
