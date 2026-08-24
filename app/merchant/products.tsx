@@ -422,7 +422,7 @@ export default function MerchantProductsScreen() {
   };
 
   const fmtMoney = (n: number) =>
-    `$${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    `${Math.round(Number(n || 0)).toLocaleString('en-US')} ل.س`;
 
   const totalStock = (p: ProductWithRelations) =>
     (p.variants ?? []).reduce((sum, v) => sum + (v.stock ?? 0), 0);
@@ -941,7 +941,7 @@ export default function MerchantProductsScreen() {
               />
 
               {/* Price */}
-              <Text style={styles.fieldLabel}>Price ($) *</Text>
+              <Text style={styles.fieldLabel}>السعر (ل.س) *</Text>
               <TextInputArabic
                 style={styles.input}
                 placeholder="0.00"
