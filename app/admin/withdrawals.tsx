@@ -374,7 +374,7 @@ export default function AdminWithdrawalsScreen() {
   }, [load]);
 
   const fmtMoney = (n: number) =>
-    `$${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    `${Math.round(Number(n || 0)).toLocaleString('en-US')} ل.س`;
 
   const fmtDate = (d: string) =>
     new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
@@ -954,7 +954,7 @@ export default function AdminWithdrawalsScreen() {
 
                 {/* تنفيذ سحب بمبلغ محدد */}
                 <Text style={styles.sheetSection}>تنفيذ سحب</Text>
-                <Text style={styles.notesLabel}>المبلغ المطلوب سحبه ($)</Text>
+                <Text style={styles.notesLabel}>المبلغ المطلوب سحبه (ل.س)</Text>
                 <TextInputArabic
                   style={styles.notesInput}
                   placeholder="مثال: 18"
