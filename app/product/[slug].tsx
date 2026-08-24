@@ -48,7 +48,7 @@ import { ArabicText as Text, ArabicTextInput as TextInput } from '@/components/A
 import { t } from '@/lib/i18n';
 import { openProductChat } from '@/lib/chat';
 import { playFeedback } from '@/lib/sounds';
-import { getExchangeRate, convertToSypSync } from '@/lib/currency';
+import { formatSyp } from '@/lib/currency';
 import { ImageLightbox } from '@/components/ImageLightbox';
 import { sortProductImages } from '@/lib/productImages';
 import {
@@ -90,7 +90,6 @@ export default function ProductDetailScreen() {
   const [adding, setAdding] = useState(false);
   const [affiliateLink, setAffiliateLink] = useState<AffiliateLink | null>(null);
   const [showAffiliateModal, setShowAffiliateModal] = useState(false);
-  const [exchangeRate, setExchangeRate] = useState(130);
 
   // ===== التعليقات والتقييمات (معروضة مباشرة تحت الصور، بدون الحاجة لصفحة منفصلة) =====
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -159,14 +158,6 @@ export default function ProductDetailScreen() {
   useEffect(() => {
     load().finally(() => setLoading(false));
   }, [load]);
-
-  // تحميل سعر الصرف
-  useEffect(() => {
-    getExchangeRate().then(rate => setExchangeRate(rate)).catch(() => {
-      // استخدام القيمة الافتراضية في حالة الفشل
-      setExchangeRate(130);
-    });
-  }, []);
 
   // تحميل التعليقات مع دعم الفرز، مستقلّة عن تحميل بيانات المنتج الأساسية
   const loadReviews = useCallback(async () => {
@@ -621,10 +612,10 @@ export default function ProductDetailScreen() {
             <Text style={styles.reviewCount}>({displayReviewCount} reviews)</Text>
           </View>
           <View style={styles.priceRow}>
-            <Text style={styles.price}>{convertToSypSync(product.price, exchangeRate).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} ل.س</Text>
+            <Text style={styles.price}>{formatSyp(product.price)}</Text>
             {hasDiscount ? (
               <>
-                <Text style={styles.oldPrice}>{convertToSypSync(product.compare_at_price!, exchangeRate).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} ل.س</Text>
+                <Text style={styles.oldPrice}>{formatSyp(product.compare_at_price!)}</Text>
                 <View style={styles.discountBadge}>
                   <Text style={styles.discountText}>
                     {Math.round(((product.compare_at_price! - product.price) / product.compare_at_price!) * 100)}% OFF
@@ -705,7 +696,7 @@ export default function ProductDetailScreen() {
           <View style={styles.featuresRow}>
             <View style={styles.feature}>
               <Truck size={20} color={colors.primary[600]} />
-              <Text style={styles.featureText}>Free shipping{'\n'}over $50</Text>
+              <Text style={styles.featureText}>Free shipping{'\n'}over 50,000 ل.س</Text>
             </View>
             <View style={styles.feature}>
               <RefreshCw size={20} color={colors.primary[600]} />
@@ -1024,7 +1015,7 @@ export default function ProductDetailScreen() {
                         <Text style={styles.affiliateStatLabel}>Sales</Text>
                       </View>
                       <View style={styles.affiliateStat}>
-                        <Text style={styles.affiliateStatValue}>${affiliateLink.total_earnings.toFixed(2)}</Text>
+                        <Text style={styles.affiliateStatValue}>{formatSyp(affiliateLink.total_earnings)}</Text>
                         <Text style={styles.affiliateStatLabel}>Earned</Text>
                       </View>
                     </View>
