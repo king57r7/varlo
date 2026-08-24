@@ -31,8 +31,12 @@ type UploadResult = {
 
 /**
  * Opens the image picker and returns the selected image URI.
+ *
+ * @param allowsEditing when true (default), shows the native crop/preview
+ *  screen after picking. Pass false to return the image immediately after
+ *  selection, with no extra confirmation step.
  */
-export async function pickImage(): Promise<string | null> {
+export async function pickImage(allowsEditing: boolean = true): Promise<string | null> {
   const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
   if (status !== 'granted') {
     throw new Error('Media library permission is required to upload images.');
@@ -44,7 +48,7 @@ export async function pickImage(): Promise<string | null> {
     aspect: [4, 3],
     quality: 0.8,
     selectionLimit: 1,
-    allowsEditing: true,
+    allowsEditing,
     exif: false,
     orderedSelection: true,
     legacy: true,
