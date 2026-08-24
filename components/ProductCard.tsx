@@ -4,16 +4,15 @@ import { colors, spacing, radius, typography, shadows } from '@/lib/theme';
 import { useWishlist } from '@/lib/WishlistContext';
 import type { Product } from '@/lib/supabase';
 import { primaryImageUrl } from '@/lib/productImages';
-import { convertToSypSync } from '@/lib/currency';
+import { formatSyp } from '@/lib/currency';
 
 type Props = {
   product: Product;
   onPress: () => void;
-  exchangeRate?: number;
   priceColor?: string;
 };
 
-export function ProductCard({ product, onPress, exchangeRate = 130, priceColor }: Props) {
+export function ProductCard({ product, onPress, priceColor }: Props) {
   const { isWishlisted, toggle } = useWishlist();
   const wished = isWishlisted(product.id);
   const hasDiscount = product.compare_at_price && product.compare_at_price > product.price;
@@ -23,9 +22,8 @@ export function ProductCard({ product, onPress, exchangeRate = 130, priceColor }
   // الصورة الرئيسية التي اختارها التاجر/الأدمن
   const imageUrl = primaryImageUrl(product) ?? product.images?.[0]?.image_url;
   
-  // تحويل الأسعار من دولار إلى ليرة سورية
-  const priceSyp = convertToSypSync(product.price, exchangeRate);
-  const comparePriceSyp = hasDiscount ? convertToSypSync(product.compare_at_price!, exchangeRate) : 0;
+  const priceSyp = product.price;
+  const comparePriceSyp = hasDiscount ? product.compare_at_price! : 0;
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.85}>
@@ -56,10 +54,10 @@ export function ProductCard({ product, onPress, exchangeRate = 130, priceColor }
         <Text style={styles.name} numberOfLines={2}>{product.name}</Text>
         <View style={styles.priceRow}>
           <Text style={[styles.price, priceColor ? { color: priceColor } : null]}>
-            {priceSyp.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} ل.س
+            {formatSyp(priceSyp)}
           </Text>
           {hasDiscount ? (
-            <Text style={styles.oldPrice}>{comparePriceSyp.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} ل.س</Text>
+            <Text style={styles.oldPrice}>{formatSyp(comparePriceSyp)}</Text>
           ) : null}
         </View>
         {product.rating > 0 ? (
