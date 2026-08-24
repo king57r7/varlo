@@ -3,6 +3,9 @@
  *
  * تُقرأ عبر الدالة الآمنة `get_app_settings()` وتُحدَّث عبر
  * `update_app_settings(jsonb)` — التي ترفض أي مستخدم غير أدمن.
+ *
+ * كل المبالغ في هذا الكائن بالليرة السورية (ل.س) — لا يوجد أي دولار
+ * أو سعر صرف في التطبيق.
  */
 import { supabase } from '@/lib/supabase';
 
@@ -13,21 +16,18 @@ export type AppSettings = {
   affiliate_percentage: number;
   /** نسبة أرباح التاجر (%) */
   merchant_percentage: number;
-  /** كلفة الشحن الثابتة ($) */
+  /** كلفة الشحن الثابتة (ل.س) */
   shipping_flat_cost: number;
   /** نسبة الضريبة (%) */
   tax_rate: number;
-  /** سعر الصرف: كم ليرة سورية لكل دولار أمريكي واحد */
-  usd_to_syp_exchange_rate: number;
 };
 
 export const DEFAULT_APP_SETTINGS: AppSettings = {
   upfront_percentage: 25,
   affiliate_percentage: 10,
   merchant_percentage: 75,
-  shipping_flat_cost: 5.99,
+  shipping_flat_cost: 5000,
   tax_rate: 8,
-  usd_to_syp_exchange_rate: 130,
 };
 
 export const SETTINGS_LABELS: Record<keyof AppSettings, { label: string; hint: string; suffix: string }> = {
@@ -48,18 +48,13 @@ export const SETTINGS_LABELS: Record<keyof AppSettings, { label: string; hint: s
   },
   shipping_flat_cost: {
     label: 'كلفة الشحن',
-    hint: 'كلفة شحن ثابتة تُضاف لكل طلب.',
-    suffix: '$',
+    hint: 'كلفة شحن ثابتة بالليرة السورية تُضاف لكل طلب.',
+    suffix: 'ل.س',
   },
   tax_rate: {
     label: 'نسبة الضريبة',
     hint: 'تُحتسب على المجموع الفرعي للطلب.',
     suffix: '%',
-  },
-  usd_to_syp_exchange_rate: {
-    label: 'سعر صرف الدولار',
-    hint: 'كم ليرة سورية يساوي الدولار الواحد. يُعرض للعملاء فقط، التاجر يدخل الأسعار بالدولار.',
-    suffix: 'ل.س / $',
   },
 };
 
