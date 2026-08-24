@@ -466,7 +466,7 @@ export default function AdminProductsScreen() {
     } finally { setExporting(false); }
   }, [filteredProducts]);
 
-  const fmt = (v: string | number | null) => v == null ? '' : `$${Number(v).toFixed(2)}`;
+  const fmt = (v: string | number | null) => v == null ? '' : `${Math.round(Number(v)).toLocaleString('en-US')} ل.س`;
   const fmtDate = (d: string) => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
   const merchantOptions = useMemo(() => {
@@ -965,7 +965,7 @@ export default function AdminProductsScreen() {
 
               <View style={styles.fieldRow}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.fieldLabel}>Price ($)</Text>
+                  <Text style={styles.fieldLabel}>السعر (ل.س)</Text>
                   <TextInputArabic
                     style={styles.fieldInput}
                     value={editForm.price}
@@ -975,7 +975,7 @@ export default function AdminProductsScreen() {
                   />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.fieldLabel}>Compare At ($)</Text>
+                  <Text style={styles.fieldLabel}>سعر المقارنة (ل.س)</Text>
                   <TextInputArabic
                     style={styles.fieldInput}
                     value={editForm.compare_at_price}
