@@ -31,12 +31,9 @@ import {
   DEFAULT_APP_SETTINGS,
   type AppSettings,
 } from '@/lib/settings';
-import { clearExchangeRateCache } from '@/lib/currency';
-
 type FormState = Record<keyof AppSettings, string>;
 
 const FIELD_ORDER: (keyof AppSettings)[] = [
-  'usd_to_syp_exchange_rate',
   'upfront_percentage',
   'affiliate_percentage',
   'merchant_percentage',
@@ -81,13 +78,7 @@ export default function AdminGeneralSettingsScreen() {
         Alert.alert('قيمة غير صالحة', `الرجاء إدخال رقم صحيح في حقل "${SETTINGS_LABELS[key].label}".`);
         return;
       }
-      if (key === 'usd_to_syp_exchange_rate') {
-        // سعر الصرف يجب أن يكون أكبر من 0
-        if (value === 0) {
-          Alert.alert('قيمة غير صالحة', `سعر الصرف يجب أن يكون أكبر من 0.`);
-          return;
-        }
-      } else if (key !== 'shipping_flat_cost' && value > 100) {
+      if (key !== 'shipping_flat_cost' && value > 100) {
         Alert.alert('قيمة غير صالحة', `"${SETTINGS_LABELS[key].label}" يجب أن تكون بين 0 و 100.`);
         return;
       }
@@ -99,7 +90,6 @@ export default function AdminGeneralSettingsScreen() {
       const next = await saveAppSettings(patch);
       setSaved(next);
       setForm(toForm(next));
-      clearExchangeRateCache(); // مسح التخزين المؤقت لسعر الصرف
       Alert.alert('تم الحفظ', 'تم تحديث الإعدادات العامة بنجاح، وستُطبَّق على الطلبات الجديدة فوراً.');
     } catch (e: any) {
       Alert.alert('خطأ', e?.message ?? 'تعذّر حفظ الإعدادات');
@@ -142,8 +132,9 @@ export default function AdminGeneralSettingsScreen() {
           <View style={styles.introCard}>
             <SettingsIcon size={20} color={colors.primary[600]} />
             <Text style={styles.introText}>
-              تتحكّم هذه الإعدادات بسعر صرف الدولار مقابل الليرة السورية (يُعرض للعملاء فقط)،
-              ونسبة الدفعة المقدمة المخصومة من محفظة الزبون، ونسب عمولة الأفلييت وأرباح التاجر، وكلفة الشحن والضريبة.
+              تتحكّم هذه الإعدادات بنسبة الدفعة المقدمة المخصومة من محفظة الزبون، ونسب عمولة
+              الأفلييت وأرباح التاجر، وكلفة الشحن بالليرة السورية والضريبة. كل المبالغ بالتطبيق
+              بالليرة السورية فقط.
             </Text>
           </View>
 
@@ -210,33 +201,33 @@ export default function AdminGeneralSettingsScreen() {
           ))}
 
           <View style={styles.previewCard}>
-            <Text style={styles.previewTitle}>مثال توضيحي على منتج بسعر $100</Text>
+            <Text style={styles.previewTitle}>مثال توضيحي على منتج بسعر 100,000 ل.س</Text>
             <PreviewRow
               label="سعر المنتج (ما يدخله التاجر)"
-              value={`$100`}
+              value={`100,000 ل.س`}
             />
             <PreviewRow
               label="السعر المعروض للعميل"
-              value={`${(100 * (Number(form.usd_to_syp_exchange_rate) || 130)).toFixed(0)} ل.س`}
+              value={`100,000 ل.س`}
             />
             <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: spacing.sm, marginBottom: spacing.sm }}>
               ───────────────────
             </Text>
             <PreviewRow
               label="يدفع الزبون الآن من المحفظة"
-              value={`$${((Number(form.upfront_percentage) || 0)).toFixed(2)}`}
+              value={`${((Number(form.upfront_percentage) || 0)).toFixed(0)}%`}
             />
             <PreviewRow
               label="المتبقي عند الاستلام"
-              value={`$${(100 - (Number(form.upfront_percentage) || 0)).toFixed(2)}`}
+              value={`${(100 - (Number(form.upfront_percentage) || 0)).toFixed(0)}%`}
             />
             <PreviewRow
               label="عمولة الأفلييت"
-              value={`$${((Number(form.affiliate_percentage) || 0)).toFixed(2)}`}
+              value={`${((Number(form.affiliate_percentage) || 0)).toFixed(0)}%`}
             />
             <PreviewRow
               label="أرباح التاجر"
-              value={`$${((Number(form.merchant_percentage) || 0)).toFixed(2)}`}
+              value={`${((Number(form.merchant_percentage) || 0)).toFixed(0)}%`}
             />
           </View>
 
