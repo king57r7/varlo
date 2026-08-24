@@ -31,7 +31,7 @@ import { ArabicText as Text } from '@/components/ArabicText';
 import { t } from '@/lib/i18n';
 import { confirmAction } from '@/lib/confirm';
 import { fetchAppSettings, DEFAULT_APP_SETTINGS, type AppSettings } from '@/lib/settings';
-import { getExchangeRate, convertToSypSync, formatSyp } from '@/lib/currency';
+import { formatSyp } from '@/lib/currency';
 
 /**
  * الدفع في هذا التطبيق يتم حصراً من المحفظة:
@@ -48,16 +48,10 @@ export default function CheckoutScreen() {
   const [selectedBranch, setSelectedBranch] = useState<ShippingBranch | null>(null);
   const [showGovernorates, setShowGovernorates] = useState(false);
   const [walletBalance, setWalletBalance] = useState(0);
-  // سعر الصرف المجمّد الخاص بمحفظة الزبون — يُستخدم فقط لعرض رصيد
-  // المحفظة، ولا يتأثر بتغيير سعر الصرف من لوحة الأدمن.
-  const [walletExchangeRate, setWalletExchangeRate] = useState(130);
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_APP_SETTINGS);
   const [loading, setLoading] = useState(true);
   const [orderJustPlaced, setOrderJustPlaced] = useState(false);
   const [placing, setPlacing] = useState(false);
-  // سعر الصرف الحيّ — يُستخدم فقط لتحويل أسعار المنتجات/الطلب (قبل
-  // إصدار الفاتورة)، ويتحدّث فوراً إذا بدّل الأدمن سعر الصرف.
-  const [exchangeRate, setExchangeRate] = useState(130);
   // قفل فوري يمنع تنفيذ الطلب مرتين عند النقر المزدوج (خاصة على الويب).
   const placingRef = useRef(false);
 
@@ -79,13 +73,15 @@ export default function CheckoutScreen() {
 
   const loadWallet = useCallback(async () => {
     if (!user) return;
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('wallets')
-      .select('available_balance, wallet_exchange_rate')
+      .select('available_balance')
       .eq('user_id', user.id)
       .maybeSingle();
+    if (error) {
+      console.warn('[checkout] loadWallet error', error);
+    }
     setWalletBalance(Number(data?.available_balance ?? 0));
-    setWalletExchangeRate(Number(data?.wallet_exchange_rate) || 130);
   }, [user]);
 
   const loadSettings = useCallback(async () => {
@@ -95,12 +91,6 @@ export default function CheckoutScreen() {
   useEffect(() => {
     Promise.all([loadShippingData(), loadWallet(), loadSettings()]).finally(() => setLoading(false));
   }, [loadShippingData, loadWallet, loadSettings]);
-
-  useEffect(() => {
-    getExchangeRate().then(rate => setExchangeRate(rate)).catch(() => {
-      setExchangeRate(130);
-    });
-  }, []);
 
   const upfrontPct = settings.upfront_percentage;
   const shippingCost = settings.shipping_flat_cost;
@@ -156,8 +146,8 @@ export default function CheckoutScreen() {
       setOrderJustPlaced(true);
       router.replace(`/invoice/${result.order_id}`);
 
-      const paidSyp = convertToSypSync(Number(result.paid), exchangeRate);
-      const remainingSyp = convertToSypSync(Number(result.remaining), exchangeRate);
+      const paidSyp = Number(result.paid);
+      const remainingSyp = Number(result.remaining);
       Alert.alert(
         t('Order Placed!'),
         `تم إنشاء الطلب ${result.order_number}.\n` +
@@ -193,8 +183,8 @@ export default function CheckoutScreen() {
     if (!balanceEnough) {
       Alert.alert(
         t('Insufficient wallet balance'),
-        `رصيد محفظتك (${formatSyp(convertToSypSync(walletBalance, walletExchangeRate))}) لا يكفي لدفع الدفعة المقدمة ` +
-          `(${upfrontPct}% = ${formatSyp(convertToSypSync(upfrontAmount, exchangeRate))}). يرجى شحن المحفظة أولاً.`
+        `رصيد محفظتك (${formatSyp(walletBalance)}) لا يكفي لدفع الدفعة المقدمة ` +
+          `(${upfrontPct}% = ${formatSyp(upfrontAmount)}). يرجى شحن المحفظة أولاً.`
       );
       return;
     }
@@ -203,9 +193,9 @@ export default function CheckoutScreen() {
       {
         title: 'تأكيد الدفع من المحفظة',
         message:
-          `سيتم خصم ${formatSyp(convertToSypSync(upfrontAmount, exchangeRate))} (${upfrontPct}% من إجمالي ${formatSyp(convertToSypSync(total, exchangeRate))}) ` +
+          `سيتم خصم ${formatSyp(upfrontAmount)} (${upfrontPct}% من إجمالي ${formatSyp(total)}) ` +
           `من رصيد محفظتك فوراً.\n` +
-          `المتبقي عند الاستلام: ${formatSyp(convertToSypSync(remainingAmount, exchangeRate))}\n` +
+          `المتبقي عند الاستلام: ${formatSyp(remainingAmount)}\n` +
           `الفرع: ${selectedBranch.branch_name}\n\nهل تريد المتابعة؟`,
         confirmText: 'ادفع الآن',
         cancelText: 'إلغاء',
@@ -215,8 +205,7 @@ export default function CheckoutScreen() {
     );
   }, [
     user, selectedBranch, items.length, balanceEnough, walletBalance,
-    upfrontPct, upfrontAmount, remainingAmount, total, placing, submitOrder, exchangeRate,
-    walletExchangeRate,
+    upfrontPct, upfrontAmount, remainingAmount, total, placing, submitOrder,
   ]);
 
   if (loading || cartLoading || orderJustPlaced) {
@@ -350,21 +339,21 @@ export default function CheckoutScreen() {
               <Text style={styles.optionDesc}>المتاح حالياً للدفع</Text>
             </View>
             <Text style={[styles.walletBalance, !balanceEnough && styles.walletBalanceLow]}>
-              {formatSyp(convertToSypSync(walletBalance, walletExchangeRate))}
+              {formatSyp(walletBalance)}
             </Text>
           </View>
 
           <View style={styles.summaryRow}>
             <Text style={styles.upfrontLabel}>{`المطلوب الآن (${upfrontPct}%)`}</Text>
             <View style={{ alignItems: 'flex-end' }}>
-              <Text style={styles.upfrontValue}>{formatSyp(convertToSypSync(upfrontAmount, exchangeRate))}</Text>
+              <Text style={styles.upfrontValue}>{formatSyp(upfrontAmount)}</Text>
             </View>
           </View>
           <View style={styles.summaryRow}>
             <Text style={styles.remainingLabel}>الرصيد بعد الدفع</Text>
             <View style={{ alignItems: 'flex-end' }}>
               <Text style={styles.remainingValue}>
-                {formatSyp(convertToSypSync(Math.max(0, walletBalance - upfrontAmount), walletExchangeRate))}
+                {formatSyp(Math.max(0, walletBalance - upfrontAmount))}
               </Text>
             </View>
           </View>
@@ -374,7 +363,7 @@ export default function CheckoutScreen() {
               <AlertTriangle size={16} color={colors.warning[600]} />
               <View style={{ flex: 1, marginHorizontal: spacing.sm }}>
                 <Text style={styles.warningText}>
-                  {`الرصيد لا يكفي للدفعة المقدمة. تحتاج ${formatSyp(convertToSypSync(Math.max(0, upfrontAmount - walletBalance), walletExchangeRate))} إضافية.`}
+                  {`الرصيد لا يكفي للدفعة المقدمة. تحتاج ${formatSyp(Math.max(0, upfrontAmount - walletBalance))} إضافية.`}
                 </Text>
               </View>
               <TouchableOpacity onPress={() => router.push('/wallet')}>
@@ -395,7 +384,7 @@ export default function CheckoutScreen() {
                 </Text>
                 <View style={{ alignItems: 'flex-end' }}>
                   <Text style={styles.summaryItemPrice}>
-                    {formatSyp(convertToSypSync(itemTotal, exchangeRate))}
+                    {formatSyp(itemTotal)}
                   </Text>
                 </View>
               </View>
@@ -405,38 +394,38 @@ export default function CheckoutScreen() {
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Subtotal</Text>
             <View style={{ alignItems: 'flex-end' }}>
-              <Text style={styles.summaryValue}>{formatSyp(convertToSypSync(subtotal, exchangeRate))}</Text>
+              <Text style={styles.summaryValue}>{formatSyp(subtotal)}</Text>
             </View>
           </View>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Shipping</Text>
             <View style={{ alignItems: 'flex-end' }}>
-              <Text style={styles.summaryValue}>{formatSyp(convertToSypSync(shippingCost, exchangeRate))}</Text>
+              <Text style={styles.summaryValue}>{formatSyp(shippingCost)}</Text>
             </View>
           </View>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Tax</Text>
             <View style={{ alignItems: 'flex-end' }}>
-              <Text style={styles.summaryValue}>{formatSyp(convertToSypSync(tax, exchangeRate))}</Text>
+              <Text style={styles.summaryValue}>{formatSyp(tax)}</Text>
             </View>
           </View>
           <View style={[styles.summaryRow, styles.totalRow]}>
             <Text style={styles.totalLabel}>Total</Text>
             <View style={{ alignItems: 'flex-end' }}>
-              <Text style={styles.totalValue}>{formatSyp(convertToSypSync(total, exchangeRate))}</Text>
+              <Text style={styles.totalValue}>{formatSyp(total)}</Text>
             </View>
           </View>
           <View style={styles.divider} />
           <View style={styles.summaryRow}>
             <Text style={styles.upfrontLabel}>{`تدفع الآن (${upfrontPct}%)`}</Text>
             <View style={{ alignItems: 'flex-end' }}>
-              <Text style={styles.upfrontValue}>{formatSyp(convertToSypSync(upfrontAmount, exchangeRate))}</Text>
+              <Text style={styles.upfrontValue}>{formatSyp(upfrontAmount)}</Text>
             </View>
           </View>
           <View style={styles.summaryRow}>
             <Text style={styles.remainingLabel}>{`عند الاستلام (${(100 - upfrontPct).toFixed(0)}%)`}</Text>
             <View style={{ alignItems: 'flex-end' }}>
-              <Text style={styles.remainingValue}>{formatSyp(convertToSypSync(remainingAmount, exchangeRate))}</Text>
+              <Text style={styles.remainingValue}>{formatSyp(remainingAmount)}</Text>
             </View>
           </View>
         </Section>
@@ -444,7 +433,7 @@ export default function CheckoutScreen() {
       <View style={styles.bottomBar}>
         <View style={styles.bottomBarInfo}>
           <Text style={styles.bottomBarLabel}>{`الدفع الآن (${upfrontPct}%)`}</Text>
-          <Text style={styles.bottomBarAmount}>{formatSyp(convertToSypSync(upfrontAmount, exchangeRate))}</Text>
+          <Text style={styles.bottomBarAmount}>{formatSyp(upfrontAmount)}</Text>
         </View>
         <View style={{ flex: 1, marginLeft: spacing.md }}>
           <Button
