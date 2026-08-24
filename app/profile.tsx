@@ -33,7 +33,7 @@ export default function ProfileScreen() {
         id: user.id,
         full_name: fullName.trim() || null,
         phone: phone.trim() || null,
-        default_currency: profile?.default_currency ?? 'USD',
+        default_currency: 'SYP',
         default_language: profile?.default_language ?? 'en',
       });
     setSaving(false);
