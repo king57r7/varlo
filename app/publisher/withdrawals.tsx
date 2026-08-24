@@ -192,7 +192,7 @@ export default function PublisherPaymentHistoryScreen() {
   }, [load]);
 
   const fmtMoney = (n: number) =>
-    `$${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    `${Math.round(Number(n || 0)).toLocaleString('en-US')} ل.س`;
 
   const fmtDate = (d: string) =>
     new Date(d).toLocaleDateString('en-US', {
