@@ -1,6 +1,7 @@
 import { Tabs } from 'expo-router';
 import { Home, Search, ShoppingBag, Heart, User, Play } from 'lucide-react-native';
 import { Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '@/lib/theme';
 import { useCart } from '@/lib/CartContext';
 import { useWishlist } from '@/lib/WishlistContext';
@@ -8,10 +9,14 @@ import { useWishlist } from '@/lib/WishlistContext';
 export default function TabLayout() {
   const { totalItems } = useCart();
   const { items } = useWishlist();
+  const insets = useSafeAreaInsets();
 
-  // Bottom padding: extra space on iOS for home indicator, safe on Android too
-  const tabBarHeight = Platform.OS === 'ios' ? 82 : 72;
-  const tabBarPaddingBottom = Platform.OS === 'ios' ? 24 : 10;
+  // Bottom padding follows each device's actual safe area (home indicator /
+  // gesture bar height), so the tab bar never overlaps the system buttons
+  // on any phone, instead of a fixed value that only fit some devices.
+  const baseContentHeight = 56;
+  const tabBarPaddingBottom = Math.max(insets.bottom, Platform.OS === 'ios' ? 20 : 10);
+  const tabBarHeight = baseContentHeight + tabBarPaddingBottom;
 
   return (
     <Tabs
