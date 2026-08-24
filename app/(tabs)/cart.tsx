@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -20,6 +20,8 @@ import type { Coupon } from '@/lib/supabase';
 import { ArabicText as Text, ArabicTextInput as TextInput } from '@/components/ArabicText';
 import { t } from '@/lib/i18n';
 import { BannerSlot } from '@/components/BannerSlot';
+import { fetchAppSettings, DEFAULT_APP_SETTINGS, type AppSettings } from '@/lib/settings';
+import { formatSyp } from '@/lib/currency';
 
 export default function CartScreen() {
   const { items, loading, updateQuantity, removeItem, clearCart, subtotal } = useCart();
@@ -28,14 +30,19 @@ export default function CartScreen() {
   const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
   const [couponError, setCouponError] = useState('');
   const [checkingCoupon, setCheckingCoupon] = useState(false);
+  const [settings, setSettings] = useState<AppSettings>(DEFAULT_APP_SETTINGS);
 
-  const shippingCost = subtotal >= 50 ? 0 : 5.99;
+  useEffect(() => {
+    fetchAppSettings().then(setSettings);
+  }, []);
+
+  const shippingCost = settings.shipping_flat_cost;
   const discount = appliedCoupon
     ? appliedCoupon.discount_type === 'percentage'
       ? (subtotal * appliedCoupon.discount_value) / 100
       : Math.min(appliedCoupon.discount_value, subtotal)
     : 0;
-  const tax = (subtotal - discount) * 0.08;
+  const tax = (subtotal - discount) * (settings.tax_rate / 100);
   const total = Math.max(0, subtotal - discount + shippingCost + tax);
 
   const applyCoupon = useCallback(async () => {
@@ -56,7 +63,7 @@ export default function CartScreen() {
     }
     const coupon = data as Coupon;
     if (coupon.min_spend && subtotal < coupon.min_spend) {
-      setCouponError(`Minimum spend $${coupon.min_spend} required`);
+      setCouponError(`الحد الأدنى للطلب ${formatSyp(coupon.min_spend)}`);
       setAppliedCoupon(null);
       return;
     }
@@ -129,7 +136,7 @@ export default function CartScreen() {
               <Text style={styles.itemName} numberOfLines={2}>{item.product?.name}</Text>
               {item.size ? <Text style={styles.itemVariant}>Size: {item.size}</Text> : null}
               {item.color ? <Text style={styles.itemVariant}>Color: {item.color}</Text> : null}
-              <Text style={styles.itemPrice}>${(item.product?.price ?? 0).toFixed(2)}</Text>
+              <Text style={styles.itemPrice}>{formatSyp(item.product?.price ?? 0)}</Text>
               <View style={styles.itemActions}>
                 <View style={styles.qtyControl}>
                   <TouchableOpacity
@@ -205,29 +212,29 @@ export default function CartScreen() {
       <View style={styles.bottomBar}>
         <View style={styles.summaryRow}>
           <Text style={styles.summaryLabel}>Subtotal</Text>
-          <Text style={styles.summaryValue}>${subtotal.toFixed(2)}</Text>
+          <Text style={styles.summaryValue}>{formatSyp(subtotal)}</Text>
         </View>
         {discount > 0 ? (
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Discount</Text>
             <Text style={[styles.summaryValue, { color: colors.success[600] }]}>
-              -${discount.toFixed(2)}
+              -{formatSyp(discount)}
             </Text>
           </View>
         ) : null}
         <View style={styles.summaryRow}>
           <Text style={styles.summaryLabel}>Shipping</Text>
           <Text style={styles.summaryValue}>
-            {shippingCost === 0 ? 'FREE' : `$${shippingCost.toFixed(2)}`}
+            {shippingCost === 0 ? 'FREE' : formatSyp(shippingCost)}
           </Text>
         </View>
         <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>Tax (8%)</Text>
-          <Text style={styles.summaryValue}>${tax.toFixed(2)}</Text>
+          <Text style={styles.summaryLabel}>{`Tax (${settings.tax_rate}%)`}</Text>
+          <Text style={styles.summaryValue}>{formatSyp(tax)}</Text>
         </View>
         <View style={[styles.summaryRow, styles.totalRow]}>
           <Text style={styles.totalLabel}>Total</Text>
-          <Text style={styles.totalValue}>${total.toFixed(2)}</Text>
+          <Text style={styles.totalValue}>{formatSyp(total)}</Text>
         </View>
         <Button title="Proceed to Checkout" onPress={handleCheckout} fullWidth size="lg" />
       </View>
