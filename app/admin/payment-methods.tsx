@@ -41,7 +41,6 @@ type PaymentMethodRecord = {
   account_name: string | null;
   account_number: string | null;
   extra_info: string | null;
-  currency: 'SYP' | 'USD' | 'both';
   logo_url: string | null;
   min_amount: number | null;
   max_amount: number | null;
@@ -56,12 +55,6 @@ const TYPE_OPTIONS: { key: MethodType; label: string }[] = [
   { key: 'transfer', label: 'حوالة' },
   { key: 'cash', label: 'نقداً' },
   { key: 'other', label: 'أخرى' },
-];
-
-const CURRENCY_OPTIONS: { key: 'SYP' | 'USD' | 'both'; label: string }[] = [
-  { key: 'SYP', label: 'ليرة سورية' },
-  { key: 'USD', label: 'دولار' },
-  { key: 'both', label: 'الاثنان' },
 ];
 
 const TYPE_ICONS: Record<string, React.ReactNode> = {
@@ -92,7 +85,6 @@ export default function AdminPaymentMethodsScreen() {
   const [accountName, setAccountName] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
   const [extraInfo, setExtraInfo] = useState('');
-  const [currency, setCurrency] = useState<'SYP' | 'USD' | 'both'>('both');
   const [minAmount, setMinAmount] = useState('');
   const [maxAmount, setMaxAmount] = useState('');
   const [sortOrder, setSortOrder] = useState('0');
@@ -132,7 +124,6 @@ export default function AdminPaymentMethodsScreen() {
     setAccountName('');
     setAccountNumber('');
     setExtraInfo('');
-    setCurrency('both');
     setMinAmount('');
     setMaxAmount('');
     setSortOrder(String(methods.length + 1));
@@ -148,7 +139,6 @@ export default function AdminPaymentMethodsScreen() {
     setAccountName(m.account_name ?? '');
     setAccountNumber(m.account_number ?? '');
     setExtraInfo(m.extra_info ?? '');
-    setCurrency(m.currency ?? 'both');
     setMinAmount(m.min_amount != null ? String(m.min_amount) : '');
     setMaxAmount(m.max_amount != null ? String(m.max_amount) : '');
     setSortOrder(String(m.sort_order ?? 0));
@@ -178,7 +168,7 @@ export default function AdminPaymentMethodsScreen() {
       account_name: accountName.trim() || null,
       account_number: accountNumber.trim(),
       extra_info: extraInfo.trim() || null,
-      currency,
+      currency: 'SYP',
       min_amount: parsedMin,
       max_amount: parsedMax,
       sort_order: Number(sortOrder) || 0,
@@ -501,22 +491,6 @@ export default function AdminPaymentMethodsScreen() {
                 onChangeText={setExtraInfo}
                 editable={!saving}
               />
-
-              <Text style={[styles.fieldLabel, { marginTop: spacing.md }]}>العملة المقبولة</Text>
-              <View style={styles.typeRow}>
-                {CURRENCY_OPTIONS.map((opt) => (
-                  <TouchableOpacity
-                    key={opt.key}
-                    style={[styles.typeBtn, currency === opt.key && styles.typeBtnActive]}
-                    onPress={() => setCurrency(opt.key)}
-                    disabled={saving}
-                  >
-                    <Text style={[styles.typeBtnText, currency === opt.key && styles.typeBtnTextActive]}>
-                      {opt.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
 
               <View style={{ flexDirection: 'row', gap: spacing.sm }}>
                 <View style={{ flex: 1 }}>
