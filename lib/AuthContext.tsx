@@ -136,10 +136,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { error: null }; // المستخدم ألغى العملية، لا داعي لإظهار خطأ.
     }
 
-    // ملاحظة: لا نستبدل الكود بجلسة هون. نظام التوجيه (deep link) رح يفتح
-    // صفحة /auth/callback تلقائياً وهي المسؤولة الوحيدة عن استبدال الكود،
-    // لأن الكود يُستخدم مرة واحدة فقط. onAuthStateChange رح يلتقط الجلسة
-    // تلقائياً لما تخلص تلك الصفحة عملها.
+    // نستخرج الكود من رابط الرجوع ونستبدله بجلسة مباشرة هون. لا يمكن الاعتماد
+    // على أنّ نظام الروابط العميقة (deep link) رح يفتح صفحة /auth/callback
+    // تلقائياً بعد إغلاق متصفح تسجيل الدخول — على أندرويد تحديداً، إغلاق
+    // المتصفح والعودة للتطبيق ما بيولّد حدث Linking جديد دائماً، فتضل الجلسة
+    // بدون استبدال ويرجع المستخدم على شاشة الدخول وكأنو ما صار شي.
+    try {
+      const url = new URL(result.url);
+      const code = url.searchParams.get('code');
+      const oauthError = url.searchParams.get('error_description') || url.searchParams.get('error');
+
+      if (oauthError) {
+        return { error: oauthError };
+      }
+      if (!code) {
+        return { error: 'تعذّر إكمال تسجيل الدخول عبر Google (لا يوجد كود).' };
+      }
+
+      const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+      if (exchangeError) {
+        return { error: exchangeError.message };
+      }
+    } catch (e) {
+      console.log('[signInWithGoogle] failed to exchange code', e);
+      return { error: 'تعذّر إكمال تسجيل الدخول عبر Google.' };
+    }
+
     return { error: null };
   };
 
