@@ -167,7 +167,7 @@ export async function buildInvoiceHtml(invoice: Invoice): Promise<string> {
       <div class="logo">V</div>
       <div>
         <div class="bname">VARLO</div>
-        <div class="btag">CLOTHING STORE</div>
+        <div class="btag">ONLINE MARKETPLACE</div>
       </div>
     </div>
     <div class="doc">
