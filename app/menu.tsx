@@ -57,7 +57,7 @@ export default function MenuScreen() {
         <View style={styles.brandCard}>
           <Image source={require('@/assets/images/varlo-logo.png')} style={styles.brandLogo} />
           <Text style={styles.brandName}>VARLO</Text>
-          <Text style={styles.brandTagline}>Fashion for Everyone</Text>
+          <Text style={styles.brandTagline}>Everything You Need, All In One Place</Text>
         </View>
         <View style={styles.menuContainer}>
           {menuItems.map((item, i) => {
