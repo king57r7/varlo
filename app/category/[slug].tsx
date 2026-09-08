@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   SafeAreaView,
   RefreshControl,
+  Image,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ChevronLeft, SlidersHorizontal, ArrowUpDown } from 'lucide-react-native';
@@ -14,9 +15,10 @@ import { supabase } from '@/lib/supabase';
 import { ProductCard } from '@/components/ProductCard';
 import { LoadingState } from '@/components/LoadingState';
 import { EmptyState } from '@/components/EmptyState';
+import { BannerSlot } from '@/components/BannerSlot';
 import type { Product, Category } from '@/lib/supabase';
 import { ArabicText as Text } from '@/components/ArabicText';
-import { t } from '@/lib/i18n';
+import { getChildren, getDescendantIds, getCategoryPath } from '@/lib/categories';
 
 type SortOption = 'newest' | 'price_asc' | 'price_desc' | 'rating';
 
@@ -24,6 +26,7 @@ export default function CategoryScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const [products, setProducts] = useState<Product[]>([]);
   const [category, setCategory] = useState<Category | null>(null);
+  const [allCategories, setAllCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>('newest');
@@ -31,18 +34,26 @@ export default function CategoryScreen() {
 
   const load = useCallback(async () => {
     if (!slug) return;
-    const { data: cat } = await supabase
-      .from('categories')
-      .select('*')
-      .eq('slug', slug)
-      .maybeSingle();
+    const [{ data: cat }, { data: allCats }] = await Promise.all([
+      supabase.from('categories').select('*').eq('slug', slug).maybeSingle(),
+      supabase.from('categories').select('*').eq('is_active', true).order('sort_order'),
+    ]);
     setCategory(cat as Category | null);
+    setAllCategories((allCats as Category[]) ?? []);
+
+    if (!cat) {
+      setProducts([]);
+      return;
+    }
+
+    // كل منتجات هذا التصنيف + كل تصنيفاته الفرعية بعمق غير محدود (قسم كامل مثلاً)
+    const categoryIds = getDescendantIds((allCats as Category[]) ?? [cat as Category], cat.id);
 
     let query = supabase
       .from('products')
       .select(`*, images:product_images(*)`)
       .eq('status', 'active')
-      .eq('category_id', cat?.id);
+      .in('category_id', categoryIds);
 
     switch (sortBy) {
       case 'price_asc':
@@ -72,6 +83,19 @@ export default function CategoryScreen() {
     setRefreshing(false);
   }, [load]);
 
+  const subCategories = useMemo(
+    () => (category ? getChildren(allCategories, category.id) : []),
+    [allCategories, category]
+  );
+  const categoryIds = useMemo(
+    () => (category ? getDescendantIds(allCategories, category.id) : []),
+    [allCategories, category]
+  );
+  const breadcrumb = useMemo(
+    () => (category ? getCategoryPath(allCategories, category.id) : []),
+    [allCategories, category]
+  );
+
   if (loading) return <LoadingState />;
 
   return (
@@ -80,7 +104,7 @@ export default function CategoryScreen() {
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
           <ChevronLeft size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.title}>{category?.name ?? 'Category'}</Text>
+        <Text style={styles.title} numberOfLines={1}>{category?.name ?? 'التصنيف'}</Text>
         <TouchableOpacity
           style={styles.backBtn}
           onPress={() => setShowSortMenu(!showSortMenu)}
@@ -88,13 +112,34 @@ export default function CategoryScreen() {
           <ArrowUpDown size={22} color={colors.text} />
         </TouchableOpacity>
       </View>
+
+      {breadcrumb.length > 1 ? (
+        <View style={styles.breadcrumbRow}>
+          {breadcrumb.map((c, i) => (
+            <View key={c.id} style={styles.breadcrumbItem}>
+              {i > 0 ? <Text style={styles.breadcrumbSep}>›</Text> : null}
+              <Text
+                style={[
+                  styles.breadcrumbText,
+                  i === breadcrumb.length - 1 && styles.breadcrumbTextActive,
+                ]}
+                numberOfLines={1}
+                onPress={() => i < breadcrumb.length - 1 && router.push(`/category/${c.slug}`)}
+              >
+                {c.name}
+              </Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
+
       {showSortMenu ? (
         <View style={styles.sortMenu}>
           {([
-            { key: 'newest', label: 'Newest' },
-            { key: 'price_asc', label: 'Price: Low to High' },
-            { key: 'price_desc', label: 'Price: High to Low' },
-            { key: 'rating', label: 'Top Rated' },
+            { key: 'newest', label: 'الأحدث' },
+            { key: 'price_asc', label: 'السعر: من الأقل للأعلى' },
+            { key: 'price_desc', label: 'السعر: من الأعلى للأقل' },
+            { key: 'rating', label: 'الأعلى تقييماً' },
           ] as { key: SortOption; label: string }[]).map(opt => (
             <TouchableOpacity
               key={opt.key}
@@ -113,6 +158,7 @@ export default function CategoryScreen() {
           ))}
         </View>
       ) : null}
+
       <FlatList
         data={products}
         numColumns={2}
@@ -120,11 +166,40 @@ export default function CategoryScreen() {
         contentContainerStyle={{ padding: spacing.md, gap: spacing.md }}
         columnWrapperStyle={{ gap: spacing.md }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        ListHeaderComponent={
+          <View style={{ gap: spacing.md, marginBottom: spacing.sm }}>
+            <BannerSlot placement="category" categoryIds={categoryIds} />
+            {subCategories.length > 0 ? (
+              <View>
+                <Text style={styles.subHeading}>تصنيفات فرعية</Text>
+                <View style={styles.subGrid}>
+                  {subCategories.map((sc) => (
+                    <TouchableOpacity
+                      key={sc.id}
+                      style={styles.subCard}
+                      onPress={() => router.push(`/category/${sc.slug}`)}
+                      activeOpacity={0.85}
+                    >
+                      <View style={styles.subImageWrap}>
+                        {sc.image_url ? (
+                          <Image source={{ uri: sc.image_url }} style={styles.subImage} resizeMode="cover" />
+                        ) : (
+                          <View style={[styles.subImage, { backgroundColor: colors.neutral[200] }]} />
+                        )}
+                      </View>
+                      <Text style={styles.subCardText} numberOfLines={1}>{sc.name}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            ) : null}
+          </View>
+        }
         ListEmptyComponent={
           <EmptyState
             icon={<SlidersHorizontal size={48} color={colors.neutral[300]} />}
-            title="No products found"
-            message="Check back later for new items in this category"
+            title="لا توجد منتجات"
+            message="عد لاحقاً للاطلاع على منتجات جديدة في هذا التصنيف"
           />
         }
         renderItem={({ item }) => (
@@ -162,6 +237,50 @@ const styles = StyleSheet.create({
     ...typography.h4,
     color: colors.text,
     fontWeight: '700',
+    flex: 1,
+    textAlign: 'center',
+  },
+  breadcrumbRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  breadcrumbItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  breadcrumbSep: { ...typography.caption, color: colors.neutral[300], marginHorizontal: 4 },
+  breadcrumbText: { ...typography.caption, color: colors.textMuted },
+  breadcrumbTextActive: { color: colors.primary[600], fontWeight: '700' },
+  subHeading: {
+    ...typography.body,
+    color: colors.text,
+    fontWeight: '700',
+    marginBottom: spacing.sm,
+  },
+  subGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+  },
+  subCard: {
+    width: 76,
+    alignItems: 'center',
+  },
+  subImageWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    overflow: 'hidden',
+  },
+  subImage: { width: '100%', height: '100%' },
+  subCardText: {
+    ...typography.caption,
+    color: colors.text,
+    marginTop: spacing.xs,
+    textAlign: 'center',
   },
   sortMenu: {
     backgroundColor: colors.surface,
