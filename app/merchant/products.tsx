@@ -40,6 +40,8 @@ import { pickAndUploadImage, isCloudinaryConfigured } from '@/lib/cloudinary';
 import { ProductImagesEditor } from '@/components/ProductImagesEditor';
 import { toEditableImages, saveProductImages, type EditableImage } from '@/lib/productImages';
 import { downloadCSV, buildCSV, exportPDF, buildHTMLTable } from '@/lib/export';
+import { CategoryPickerModal } from '@/components/CategoryPickerModal';
+import { getCategoryPathLabel } from '@/lib/categories';
 import type { Product, Category, ProductImage, ProductVariant } from '@/lib/supabase';
 
 type ProductWithRelations = Product & {
@@ -139,6 +141,7 @@ export default function MerchantProductsScreen() {
   const [filtersVisible, setFiltersVisible] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'draft'>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [categoryPickerOpen, setCategoryPickerOpen] = useState(false);
   const [stockFilter, setStockFilter] = useState<'all' | 'in_stock' | 'out_of_stock'>('all');
   const [priceMin, setPriceMin] = useState('');
   const [priceMax, setPriceMax] = useState('');
@@ -964,59 +967,33 @@ export default function MerchantProductsScreen() {
                 editable={!saving}
               />
 
-              {/* Category */}
-              <Text style={styles.fieldLabel}>Category</Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.categoryRow}
+              {/* Category / Department */}
+              <Text style={styles.fieldLabel}>القسم والتصنيف</Text>
+              <TouchableOpacity
+                style={styles.categoryPickerBtn}
+                onPress={() => setCategoryPickerOpen(true)}
+                disabled={saving}
               >
-                <TouchableOpacity
-                  style={[
-                    styles.categoryChip,
-                    !form.category_id && styles.categoryChipActive,
-                  ]}
-                  onPress={() => setForm({ ...form, category_id: '' })}
-                  disabled={saving}
-                >
-                  <Text
-                    style={[
-                      styles.categoryChipText,
-                      !form.category_id && styles.categoryChipTextActive,
-                    ]}
-                  >
-                    None
-                  </Text>
-                </TouchableOpacity>
-                {categories.map((cat) => (
-                  <TouchableOpacity
-                    key={cat.id}
-                    style={[
-                      styles.categoryChip,
-                      form.category_id === cat.id && styles.categoryChipActive,
-                    ]}
-                    onPress={() => setForm({ ...form, category_id: cat.id })}
-                    disabled={saving}
-                  >
-                    <Text
-                      style={[
-                        styles.categoryChipText,
-                        form.category_id === cat.id && styles.categoryChipTextActive,
-                      ]}
-                    >
-                      {cat.name}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
+                <Tag size={16} color={colors.primary[600]} />
+                <Text style={styles.categoryPickerBtnText} numberOfLines={1}>
+                  {form.category_id
+                    ? getCategoryPathLabel(categories, form.category_id)
+                    : 'اختر القسم والتصنيف المناسب للمنتج'}
+                </Text>
+              </TouchableOpacity>
+              <Text style={styles.hint}>
+                يمكنك إضافة المنتج تحت أي قسم متوفر (ملابس، إلكترونيات، منزل...) وتحت أي تصنيف
+                فرعي داخله. الألوان والمقاسات أدناه اختيارية — اتركها فارغة للمنتجات التي لا
+                تحتاج مقاسات أو ألوان (مثل الإلكترونيات).
+              </Text>
 
               {/* Available Colors */}
               <View style={styles.variantsSectionHeader}>
                 <Text style={styles.fieldLabel}>
-                  <Palette size={14} color={colors.text} /> Available Colors
+                  <Palette size={14} color={colors.text} /> الألوان المتوفرة (اختياري)
                 </Text>
                 <Text style={styles.variantsHint}>
-                  Tap the colors this product comes in.
+                  اختر الألوان إن كان المنتج يتوفر بأكثر من لون، وإلا تجاوز هذا الحقل.
                 </Text>
               </View>
               <View style={styles.colorGrid}>
@@ -1059,7 +1036,7 @@ export default function MerchantProductsScreen() {
               {/* Available Sizes (shared across all colors) */}
               <View style={styles.variantsSectionHeader}>
                 <Text style={styles.fieldLabel}>
-                  <Ruler size={14} color={colors.text} /> Available Sizes
+                  <Ruler size={14} color={colors.text} /> المقاسات المتوفرة (اختياري)
                 </Text>
                 <Text style={styles.variantsHint}>
                   These sizes apply to every color selected above.
@@ -1223,6 +1200,15 @@ export default function MerchantProductsScreen() {
           </View>
         </View>
       </Modal>
+
+      <CategoryPickerModal
+        visible={categoryPickerOpen}
+        categories={categories}
+        value={form.category_id || null}
+        onSelect={(id) => setForm((f) => ({ ...f, category_id: id ?? '' }))}
+        onClose={() => setCategoryPickerOpen(false)}
+        title="اختر قسم وتصنيف المنتج"
+      />
     </SafeAreaView>
   );
 }
@@ -1674,6 +1660,30 @@ const styles = StyleSheet.create({
     color: colors.warning[600],
     marginTop: spacing.xs,
     marginBottom: spacing.sm,
+  },
+  hint: {
+    ...typography.caption,
+    color: colors.textMuted,
+    marginTop: spacing.xs,
+    marginBottom: spacing.sm,
+    lineHeight: 18,
+  },
+  categoryPickerBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    backgroundColor: colors.background,
+  },
+  categoryPickerBtnText: {
+    ...typography.body,
+    color: colors.text,
+    flex: 1,
+    fontWeight: '600',
   },
   // Category chips
   categoryRow: {
