@@ -73,7 +73,7 @@ export function InvoiceView({ invoice }: { invoice: Invoice }) {
             <Image source={require('@/assets/images/varlo-logo.png')} style={styles.logo} />
             <View>
               <Text style={styles.brandName}>VARLO</Text>
-              <Text style={styles.brandTag}>CLOTHING STORE</Text>
+              <Text style={styles.brandTag}>ONLINE MARKETPLACE</Text>
             </View>
           </View>
           <View style={{ alignItems: 'flex-start' }}>
