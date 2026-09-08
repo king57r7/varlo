@@ -12,13 +12,18 @@ type Props = {
   /** أقصى عدد بنرات تُعرض في هذا المكان */
   limit?: number;
   style?: any;
+  /**
+   * عند تمريرها، يعرض الفتحة بنرات هذا القسم/التصنيف فقط (بالإضافة للبنرات
+   * العامة بدون category_id). مفيد لعرض بنرات خاصة بقسم معيّن (مثل إلكترونيات).
+   */
+  categoryIds?: string[];
 };
 
 /**
  * فتحة بنر عامة يتحكم بها الأدمن بالكامل من صفحة «البنرات».
  * تعرض البنرات المفعّلة فقط، وتحترم تاريخ البداية والنهاية.
  */
-export function BannerSlot({ placement, limit = 1, style }: Props) {
+export function BannerSlot({ placement, limit = 1, style, categoryIds }: Props) {
   const [banners, setBanners] = useState<Banner[]>([]);
 
   useEffect(() => {
@@ -31,19 +36,24 @@ export function BannerSlot({ placement, limit = 1, style }: Props) {
         .eq('placement', placement)
         .eq('is_active', true)
         .order('sort_order', { ascending: true })
-        .limit(limit + 4);
+        .limit(limit + 8);
 
       if (cancelled) return;
       const list = ((data as (Banner & { start_date?: string | null; end_date?: string | null })[]) ?? [])
         .filter(b => !b.start_date || b.start_date <= nowIso)
         .filter(b => !b.end_date || b.end_date >= nowIso)
+        .filter(b => {
+          if (!categoryIds || categoryIds.length === 0) return true;
+          // بلا تصنيف = بنر عام يظهر في كل مكان، أو مرتبط بأحد تصنيفات هذا القسم
+          return !b.category_id || categoryIds.includes(b.category_id);
+        })
         .slice(0, limit);
       setBanners(list);
     })();
     return () => {
       cancelled = true;
     };
-  }, [placement, limit]);
+  }, [placement, limit, categoryIds?.join(',')]);
 
   if (banners.length === 0) return null;
 
