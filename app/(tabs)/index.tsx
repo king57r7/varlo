@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import {
   View,
   StyleSheet,
@@ -11,16 +11,15 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { router } from 'expo-router';
-import { Search, Bell, Menu, ChevronRight, TrendingUp, Sparkles, Tag, LayoutGrid } from 'lucide-react-native';
+import { Search, Bell, Menu, Heart, ChevronRight, TrendingUp, Sparkles, Tag } from 'lucide-react-native';
 import { colors, spacing, radius, typography, shadows } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/AuthContext';
 import { ProductCard } from '@/components/ProductCard';
 import { LoadingState } from '@/components/LoadingState';
-import { EmptyState } from '@/components/EmptyState';
 import type { Product, Category, Banner } from '@/lib/supabase';
 import { ArabicText as Text } from '@/components/ArabicText';
-import { getDepartments, getChildren, getDescendantIds } from '@/lib/categories';
+import { t } from '@/lib/i18n';
 
 const { width } = Dimensions.get('window');
 const BANNER_HEIGHT = 200;
@@ -33,101 +32,46 @@ export default function HomeScreen() {
   const [newArrivals, setNewArrivals] = useState<Product[]>([]);
   const [bestSellers, setBestSellers] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sectionsLoading, setSectionsLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [activeBanner, setActiveBanner] = useState(0);
-  const [selectedDept, setSelectedDept] = useState<string | null>(null);
 
-  // القائمة الرئيسية: كل الأقسام (تصنيفات بدون تصنيف أب)
-  const departments = useMemo(() => getDepartments(categories), [categories]);
-  // التصنيفات الفرعية المباشرة للقسم المختار
-  const subCategories = useMemo(
-    () => (selectedDept ? getChildren(categories, selectedDept) : []),
-    [categories, selectedDept]
-  );
-  // كل معرّفات القسم المختار + فروعه بعمق غير محدود — لعرض كل منتجاته
-  const deptCategoryIds = useMemo(
-    () => (selectedDept ? getDescendantIds(categories, selectedDept) : []),
-    [categories, selectedDept]
-  );
-
-  // تحميل أولي: البنرات + الأقسام فقط، لتحديد القسم الافتراضي بسرعة
-  const loadCategoriesAndBanners = useCallback(async () => {
-    const [bannersRes, categoriesRes] = await Promise.all([
+  const loadData = useCallback(async () => {
+    const [bannersRes, categoriesRes, featuredRes, newRes, bestRes] = await Promise.all([
       supabase.from('banners').select('*').eq('is_active', true).order('sort_order'),
       supabase.from('categories').select('*').eq('is_active', true).order('sort_order'),
+      supabase.from('products')
+        .select(`*, images:product_images(*)`)
+        .eq('status', 'active')
+        .eq('is_featured', true)
+        .limit(6),
+      supabase.from('products')
+        .select(`*, images:product_images(*)`)
+        .eq('status', 'active')
+        .eq('is_new', true)
+        .limit(6),
+      supabase.from('products')
+        .select(`*, images:product_images(*)`)
+        .eq('status', 'active')
+        .order('rating', { ascending: false })
+        .limit(6),
     ]);
-    const cats = (categoriesRes.data as Category[]) ?? [];
+
     setBanners((bannersRes.data as Banner[]) ?? []);
-    setCategories(cats);
-    return cats;
-  }, []);
-
-  // تحميل منتجات القسم المختار حالياً
-  const loadDeptProducts = useCallback(async (categoryIds: string[]) => {
-    const scoped = (q: any) => (categoryIds.length > 0 ? q.in('category_id', categoryIds) : q);
-
-    const [featuredRes, newRes, bestRes] = await Promise.all([
-      scoped(
-        supabase.from('products').select(`*, images:product_images(*)`).eq('status', 'active').eq('is_featured', true)
-      ).limit(6),
-      scoped(
-        supabase.from('products').select(`*, images:product_images(*)`).eq('status', 'active').eq('is_new', true)
-      ).limit(6),
-      scoped(
-        supabase.from('products').select(`*, images:product_images(*)`).eq('status', 'active').order('rating', { ascending: false })
-      ).limit(10),
-    ]);
-
+    setCategories((categoriesRes.data as Category[]) ?? []);
     setFeatured((featuredRes.data as Product[]) ?? []);
     setNewArrivals((newRes.data as Product[]) ?? []);
     setBestSellers((bestRes.data as Product[]) ?? []);
   }, []);
 
   useEffect(() => {
-    (async () => {
-      const cats = await loadCategoriesAndBanners();
-      const depts = getDepartments(cats);
-      const initialDept = depts[0]?.id ?? null;
-      setSelectedDept(initialDept);
-      const ids = initialDept ? getDescendantIds(cats, initialDept) : [];
-      await loadDeptProducts(ids);
-      setLoading(false);
-    })();
-  }, [loadCategoriesAndBanners, loadDeptProducts]);
-
-  const onSelectDept = useCallback(
-    async (deptId: string | null) => {
-      if (deptId === selectedDept) return;
-      setSelectedDept(deptId);
-      setSectionsLoading(true);
-      const ids = deptId ? getDescendantIds(categories, deptId) : [];
-      await loadDeptProducts(ids);
-      setSectionsLoading(false);
-    },
-    [selectedDept, categories, loadDeptProducts]
-  );
+    loadData().finally(() => setLoading(false));
+  }, [loadData]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    const cats = await loadCategoriesAndBanners();
-    const stillExists = selectedDept && cats.some((c) => c.id === selectedDept);
-    const dept = stillExists ? selectedDept : getDepartments(cats)[0]?.id ?? null;
-    setSelectedDept(dept);
-    const ids = dept ? getDescendantIds(cats, dept) : [];
-    await loadDeptProducts(ids);
+    await loadData();
     setRefreshing(false);
-  }, [loadCategoriesAndBanners, loadDeptProducts, selectedDept]);
-
-  // البنرات الخاصة بهذا القسم (المرتبطة به) + البنرات العامة (بدون قسم)
-  const bannersForDept = useMemo(
-    () =>
-      banners.filter((b) => !b.category_id || (selectedDept && deptCategoryIds.includes(b.category_id))),
-    [banners, selectedDept, deptCategoryIds]
-  );
-
-  const noSectionsAtAll =
-    !sectionsLoading && featured.length === 0 && newArrivals.length === 0 && bestSellers.length === 0;
+  }, [loadData]);
 
   if (loading) return <LoadingState />;
 
@@ -138,45 +82,24 @@ export default function HomeScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         <Header />
-        <DepartmentSwitcher
-          departments={departments}
-          selected={selectedDept}
-          onSelect={onSelectDept}
+        <BannerSlider banners={banners} activeIndex={activeBanner} onChange={setActiveBanner} />
+        <QuickCategories categories={categories} />
+        <FeaturedSection
+          title="Featured Products"
+          icon={<Sparkles size={20} color={colors.primary[600]} />}
+          products={featured}
         />
-        <BannerSlider banners={bannersForDept} activeIndex={activeBanner} onChange={setActiveBanner} />
-        {subCategories.length > 0 ? (
-          <SubCategoryRow categories={subCategories} />
-        ) : null}
-        {sectionsLoading ? (
-          <View style={{ paddingVertical: spacing.xl, alignItems: 'center' }}>
-            <Text style={{ color: colors.textMuted }}>...جاري تحميل منتجات القسم</Text>
-          </View>
-        ) : noSectionsAtAll ? (
-          <EmptyState
-            icon={<LayoutGrid size={44} color={colors.neutral[300]} />}
-            title="لا توجد منتجات في هذا القسم بعد"
-            message="عد لاحقاً أو اختر قسماً آخر لتصفح المنتجات المتوفرة."
-          />
-        ) : (
-          <>
-            <FeaturedSection
-              title="منتجات مميزة"
-              icon={<Sparkles size={20} color={colors.primary[600]} />}
-              products={featured}
-            />
-            <SecondaryBanner banner={bannersForDept.find((b) => b.placement === 'home_secondary')} />
-            <FeaturedSection
-              title="وصل حديثاً"
-              icon={<TrendingUp size={20} color={colors.success[600]} />}
-              products={newArrivals}
-            />
-            <FeaturedSection
-              title="الأكثر مبيعاً"
-              icon={<Tag size={20} color={colors.accent[600]} />}
-              products={bestSellers}
-            />
-          </>
-        )}
+        <SecondaryBanner banner={banners.find(b => b.placement === 'home_secondary')} />
+        <FeaturedSection
+          title="New Arrivals"
+          icon={<TrendingUp size={20} color={colors.success[600]} />}
+          products={newArrivals}
+        />
+        <FeaturedSection
+          title="Best Sellers"
+          icon={<Tag size={20} color={colors.accent[600]} />}
+          products={bestSellers}
+        />
         <View style={{ height: spacing.lg }} />
       </ScrollView>
     </SafeAreaView>
@@ -189,7 +112,7 @@ function Header() {
       <View style={styles.brandRow}>
         <Image source={require('@/assets/images/varlo-logo.png')} style={styles.brandLogo} />
         <View>
-          <Text style={styles.greeting}>أهلاً بك</Text>
+          <Text style={styles.greeting}>Welcome</Text>
           <Text style={styles.brandName}>VARLO</Text>
         </View>
       </View>
@@ -208,92 +131,12 @@ function Header() {
   );
 }
 
-/** شريط تبديل الأقسام أعلى الصفحة الرئيسية — يحدد أي قسم (ملابس، إلكترونيات...) نشاهد محتواه حالياً. */
-function DepartmentSwitcher({
-  departments,
-  selected,
-  onSelect,
-}: {
-  departments: Category[];
-  selected: string | null;
-  onSelect: (id: string | null) => void;
-}) {
-  if (departments.length === 0) return null;
-  return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      style={styles.deptBar}
-      contentContainerStyle={styles.deptBarContent}
-    >
-      {departments.map((dept) => {
-        const active = selected === dept.id;
-        return (
-          <TouchableOpacity
-            key={dept.id}
-            style={[styles.deptPill, active && styles.deptPillActive]}
-            onPress={() => onSelect(dept.id)}
-            activeOpacity={0.85}
-          >
-            {dept.image_url ? (
-              <Image source={{ uri: dept.image_url }} style={styles.deptPillImage} />
-            ) : (
-              <View style={[styles.deptPillImage, styles.deptPillImagePlaceholder]}>
-                <LayoutGrid size={14} color={active ? colors.white : colors.primary[500]} />
-              </View>
-            )}
-            <Text style={[styles.deptPillText, active && styles.deptPillTextActive]} numberOfLines={1}>
-              {dept.name}
-            </Text>
-          </TouchableOpacity>
-        );
-      })}
-    </ScrollView>
-  );
-}
-
-/** التصنيفات الفرعية للقسم المختار حالياً — تنقّل مباشر لصفحة كل تصنيف. */
-function SubCategoryRow({ categories }: { categories: Category[] }) {
-  return (
-    <View style={styles.section}>
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>تصنيفات هذا القسم</Text>
-        <TouchableOpacity onPress={() => router.push('/(tabs)/search')}>
-          <Text style={styles.seeAll}>عرض الكل</Text>
-        </TouchableOpacity>
-      </View>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.subCatRow}>
-        {categories.map((cat) => (
-          <TouchableOpacity
-            key={cat.id}
-            style={styles.subCatCard}
-            onPress={() => router.push(`/category/${cat.slug}`)}
-            activeOpacity={0.85}
-          >
-            <View style={styles.categoryImageWrap}>
-              {cat.image_url ? (
-                <Image source={{ uri: cat.image_url }} style={styles.categoryImage} resizeMode="cover" />
-              ) : (
-                <View style={[styles.categoryImage, { backgroundColor: colors.neutral[200] }]} />
-              )}
-            </View>
-            <Text style={styles.categoryName} numberOfLines={1}>
-              {cat.name}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-    </View>
-  );
-}
-
 function BannerSlider({ banners, activeIndex, onChange }: { banners: Banner[]; activeIndex: number; onChange: (i: number) => void }) {
-  const slides = banners.filter(b => b.placement === 'home_slider');
-  if (slides.length === 0) return null;
+  if (banners.length === 0) return null;
   return (
     <View style={styles.bannerContainer}>
       <FlatList
-        data={slides}
+        data={banners.filter(b => b.placement === 'home_slider')}
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
@@ -333,8 +176,44 @@ function BannerSlider({ banners, activeIndex, onChange }: { banners: Banner[]; a
         )}
       />
       <View style={styles.dots}>
-        {slides.map((_, i) => (
-          <View key={i} style={[styles.dot, i === activeIndex && styles.dotActive]} />
+        {banners.filter(b => b.placement === 'home_slider').map((_, i) => (
+          <View
+            key={i}
+            style={[styles.dot, i === activeIndex && styles.dotActive]}
+          />
+        ))}
+      </View>
+    </View>
+  );
+}
+
+function QuickCategories({ categories }: { categories: Category[] }) {
+  const display = categories.slice(0, 8);
+  return (
+    <View style={styles.section}>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Shop by Category</Text>
+        <TouchableOpacity onPress={() => router.push('/(tabs)/search')}>
+          <Text style={styles.seeAll}>See All</Text>
+        </TouchableOpacity>
+      </View>
+      <View style={styles.categoryGrid}>
+        {display.map((cat) => (
+          <TouchableOpacity
+            key={cat.id}
+            style={styles.categoryCard}
+            onPress={() => router.push(`/category/${cat.slug}`)}
+            activeOpacity={0.85}
+          >
+            <View style={styles.categoryImageWrap}>
+              {cat.image_url ? (
+                <Image source={{ uri: cat.image_url }} style={styles.categoryImage} resizeMode="cover" />
+              ) : (
+                <View style={[styles.categoryImage, { backgroundColor: colors.neutral[200] }]} />
+              )}
+            </View>
+            <Text style={styles.categoryName} numberOfLines={1}>{cat.name}</Text>
+          </TouchableOpacity>
         ))}
       </View>
     </View>
@@ -351,7 +230,7 @@ function FeaturedSection({ title, icon, products }: { title: string; icon: React
           <Text style={styles.sectionTitle}>{title}</Text>
         </View>
         <TouchableOpacity onPress={() => router.push('/(tabs)/search')}>
-          <Text style={styles.seeAll}>عرض الكل</Text>
+          <Text style={styles.seeAll}>See All</Text>
         </TouchableOpacity>
       </View>
       <FlatList
@@ -382,13 +261,7 @@ function SecondaryBanner({ banner }: { banner?: Banner }) {
       <TouchableOpacity
         style={styles.secondaryBanner}
         activeOpacity={0.9}
-        onPress={() => {
-          if (banner.cta_link?.startsWith('/category/')) {
-            router.push(banner.cta_link as any);
-          } else {
-            router.push('/coupons');
-          }
-        }}
+        onPress={() => router.push('/coupons')}
       >
         <Image source={{ uri: banner.image_url }} style={styles.secondaryBannerImage} resizeMode="cover" />
         <View style={styles.secondaryBannerOverlay} />
@@ -452,54 +325,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  deptBar: {
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  deptBarContent: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    gap: spacing.sm,
-  },
-  deptPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 6,
-    borderRadius: radius.full,
-    backgroundColor: colors.neutral[100],
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginEnd: spacing.xs,
-  },
-  deptPillActive: {
-    backgroundColor: colors.primary[600],
-    borderColor: colors.primary[600],
-  },
-  deptPillImage: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-  },
-  deptPillImagePlaceholder: {
-    backgroundColor: colors.primary[50],
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  deptPillText: {
-    ...typography.caption,
-    color: colors.text,
-    fontWeight: '700',
-    maxWidth: 110,
-  },
-  deptPillTextActive: {
-    color: colors.white,
-  },
   bannerContainer: {
     marginHorizontal: spacing.md,
-    marginTop: spacing.md,
     marginBottom: spacing.md,
   },
   banner: {
@@ -591,12 +418,14 @@ const styles = StyleSheet.create({
     color: colors.primary[600],
     fontWeight: '600',
   },
-  subCatRow: {
+  categoryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     paddingHorizontal: spacing.md,
     gap: spacing.md,
   },
-  subCatCard: {
-    width: 76,
+  categoryCard: {
+    width: (width - spacing.md * 2 - spacing.md * 3) / 4,
     alignItems: 'center',
   },
   categoryImageWrap: {
@@ -615,7 +444,6 @@ const styles = StyleSheet.create({
     color: colors.text,
     marginTop: spacing.xs,
     fontWeight: '500',
-    textAlign: 'center',
   },
   secondaryBanner: {
     marginHorizontal: spacing.md,

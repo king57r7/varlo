@@ -20,7 +20,6 @@ import { EmptyState } from '@/components/EmptyState';
 import type { Category, Product } from '@/lib/supabase';
 import { ArabicText as Text, ArabicTextInput as TextInput } from '@/components/ArabicText';
 import { BannerSlot } from '@/components/BannerSlot';
-import { getDepartments } from '@/lib/categories';
 import { t } from '@/lib/i18n';
 
 export default function BrowseScreen() {
@@ -153,11 +152,11 @@ export default function BrowseScreen() {
               <View style={styles.sectionHeader}>
                 <View style={styles.sectionTitleRow}>
                   <TrendingUp size={18} color={colors.text} />
-                  <Text style={styles.sectionTitle}>All Departments</Text>
+                  <Text style={styles.sectionTitle}>All Categories</Text>
                 </View>
               </View>
               <View style={styles.catGrid}>
-                {getDepartments(categories).map(cat => (
+                {categories.map(cat => (
                   <TouchableOpacity
                     key={cat.id}
                     style={styles.catCard}

@@ -46,8 +46,6 @@ import {
   type EditableImage,
 } from '@/lib/productImages';
 import { downloadCSV, buildCSV, exportPDF, buildHTMLTable } from '@/lib/export';
-import { CategoryPickerModal } from '@/components/CategoryPickerModal';
-import { getCategoryPathLabel } from '@/lib/categories';
 
 const ADMIN_API_BASE = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/admin-api`;
 
@@ -72,15 +70,7 @@ type Product = {
   merchant?: { id: string; full_name: string; email: string } | null;
 };
 
-type Category = {
-  id: string;
-  name: string;
-  slug?: string;
-  image_url?: string | null;
-  parent_id?: string | null;
-  sort_order?: number;
-  is_active?: boolean;
-};
+type Category = { id: string; name: string };
 
 type StatusFilter = 'all' | 'active' | 'draft' | 'archived';
 type StockFilter = 'all' | 'in_stock' | 'low_stock' | 'out_of_stock';
@@ -118,7 +108,6 @@ const STATUS_CONFIG: Record<string, { color: string; bg: string; label: string }
 export default function AdminProductsScreen() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [categoryPickerOpen, setCategoryPickerOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -175,7 +164,7 @@ export default function AdminProductsScreen() {
       const headers = await getAuthHeaders();
       const [productsRes, categoriesRes] = await Promise.all([
         fetch(`${ADMIN_API_BASE}/products`, { headers }),
-        supabase.from('categories').select('id, name, slug, image_url, parent_id, sort_order, is_active').order('sort_order', { ascending: true }),
+        supabase.from('categories').select('id, name').order('sort_order', { ascending: true }),
       ]);
       if (!productsRes.ok) {
         const err = await productsRes.json().catch(() => ({}));
@@ -998,17 +987,23 @@ export default function AdminProductsScreen() {
               </View>
 
               <Text style={styles.fieldLabel}>Category</Text>
-              <TouchableOpacity
-                style={styles.categoryPickerBtn}
-                onPress={() => setCategoryPickerOpen(true)}
-              >
-                <Tag size={16} color={colors.accent[600]} />
-                <Text style={styles.categoryPickerBtnText} numberOfLines={1}>
-                  {editForm.category_id
-                    ? getCategoryPathLabel(categories as any, editForm.category_id)
-                    : 'None — tap to choose a department / category'}
-                </Text>
-              </TouchableOpacity>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingBottom: spacing.xs }}>
+                <TouchableOpacity
+                  style={[styles.categoryChip, !editForm.category_id && styles.categoryChipActive]}
+                  onPress={() => setEditForm(f => ({ ...f, category_id: '' }))}
+                >
+                  <Text style={[styles.categoryChipText, !editForm.category_id && styles.categoryChipTextActive]}>None</Text>
+                </TouchableOpacity>
+                {categories.map(c => (
+                  <TouchableOpacity
+                    key={c.id}
+                    style={[styles.categoryChip, editForm.category_id === c.id && styles.categoryChipActive]}
+                    onPress={() => setEditForm(f => ({ ...f, category_id: c.id }))}
+                  >
+                    <Text style={[styles.categoryChipText, editForm.category_id === c.id && styles.categoryChipTextActive]}>{c.name}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
 
               <Text style={styles.fieldLabel}>Status</Text>
               <View style={{ flexDirection: 'row', gap: spacing.sm }}>
@@ -1033,7 +1028,7 @@ export default function AdminProductsScreen() {
                 <Switch
                   value={editForm.is_featured}
                   onValueChange={(v) => setEditForm(f => ({ ...f, is_featured: v }))}
-                  trackColor={{ false: colors.neutral[200], true: colors.warning[200] }}
+                  trackColor={{ false: colors.neutral[200], true: colors.warning[300] }}
                   thumbColor={editForm.is_featured ? colors.warning[600] : colors.neutral[400]}
                 />
               </View>
@@ -1050,38 +1045,11 @@ export default function AdminProductsScreen() {
           </View>
         </View>
       </Modal>
-
-      <CategoryPickerModal
-        visible={categoryPickerOpen}
-        categories={categories as any}
-        value={editForm.category_id || null}
-        onSelect={(id) => setEditForm((f) => ({ ...f, category_id: id ?? '' }))}
-        onClose={() => setCategoryPickerOpen(false)}
-        title="Choose department / category"
-      />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  categoryPickerBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.background,
-    marginBottom: spacing.xs,
-  },
-  categoryPickerBtnText: {
-    ...typography.body,
-    color: colors.text,
-    flex: 1,
-    fontWeight: '600',
-  },
   merchantChip: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     paddingHorizontal: spacing.md, paddingVertical: 6,

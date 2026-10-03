@@ -35,9 +35,6 @@ import { supabase } from '@/lib/supabase';
 import { confirmAction } from '@/lib/confirm';
 import { Button } from '@/components/Button';
 import { pickImage, uploadToCloudinary } from '@/lib/cloudinary';
-import { CategoryPickerModal } from '@/components/CategoryPickerModal';
-import { getCategoryPathLabel } from '@/lib/categories';
-import type { Category } from '@/lib/supabase';
 
 type Placement =
   | 'home_slider'
@@ -58,7 +55,6 @@ type BannerRecord = {
   cta_text: string | null;
   cta_link: string | null;
   placement: Placement;
-  category_id: string | null;
   sort_order: number;
   is_active: boolean;
   start_date: string | null;
@@ -87,7 +83,6 @@ const emptyForm = {
   ctaText: '',
   ctaLink: '',
   placement: 'home_slider' as Placement,
-  categoryId: null as string | null,
   sortOrder: '0',
   isActive: true,
   startDate: '',
@@ -108,8 +103,6 @@ export default function AdminBannersScreen() {
   const [uploading, setUploading] = useState(false);
   const [uploadPct, setUploadPct] = useState(0);
   const [form, setForm] = useState({ ...emptyForm });
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [categoryPickerOpen, setCategoryPickerOpen] = useState(false);
 
   const setField = <K extends keyof typeof emptyForm>(key: K, value: (typeof emptyForm)[K]) =>
     setForm(prev => ({ ...prev, [key]: value }));
@@ -117,18 +110,14 @@ export default function AdminBannersScreen() {
   const load = useCallback(async () => {
     setError(null);
     try {
-      const [{ data, error: fetchErr }, categoriesRes] = await Promise.all([
-        supabase
-          .from('banners')
-          .select('*')
-          .order('placement', { ascending: true })
-          .order('sort_order', { ascending: true })
-          .order('created_at', { ascending: false }),
-        supabase.from('categories').select('*').order('sort_order', { ascending: true }),
-      ]);
+      const { data, error: fetchErr } = await supabase
+        .from('banners')
+        .select('*')
+        .order('placement', { ascending: true })
+        .order('sort_order', { ascending: true })
+        .order('created_at', { ascending: false });
       if (fetchErr) throw fetchErr;
       setBanners((data as BannerRecord[]) ?? []);
-      setCategories((categoriesRes.data as Category[]) ?? []);
     } catch (e: any) {
       setError(e.message || 'تعذّر تحميل البنرات');
     }
@@ -159,7 +148,6 @@ export default function AdminBannersScreen() {
       ctaText: b.cta_text ?? '',
       ctaLink: b.cta_link ?? '',
       placement: b.placement,
-      categoryId: b.category_id ?? null,
       sortOrder: String(b.sort_order ?? 0),
       isActive: b.is_active,
       startDate: b.start_date ? b.start_date.slice(0, 10) : '',
@@ -207,7 +195,6 @@ export default function AdminBannersScreen() {
       cta_text: form.ctaText.trim() || null,
       cta_link: form.ctaLink.trim() || null,
       placement: form.placement,
-      category_id: form.categoryId,
       sort_order: Number(form.sortOrder) || 0,
       is_active: form.isActive,
       start_date: parseDate(form.startDate),
@@ -382,14 +369,6 @@ export default function AdminBannersScreen() {
                       <Text style={styles.metaText} numberOfLines={1}>{b.cta_link}</Text>
                     </View>
                   ) : null}
-                  {b.category_id ? (
-                    <View style={styles.metaRow}>
-                      <LinkIcon size={12} color={colors.primary[500]} />
-                      <Text style={[styles.metaText, { color: colors.primary[600], fontWeight: '700' }]} numberOfLines={1}>
-                        {`قسم: ${getCategoryPathLabel(categories, b.category_id) || 'غير معروف'}`}
-                      </Text>
-                    </View>
-                  ) : null}
 
                   <View style={styles.actionsRow}>
                     <IconBtn onPress={() => openEdit(b)}>
@@ -504,18 +483,6 @@ export default function AdminBannersScreen() {
                 {PLACEMENTS.find(p => p.key === form.placement)?.hint ?? ''}
               </Text>
 
-              <Text style={styles.fieldLabel}>ربط بقسم / تصنيف (اختياري)</Text>
-              <TouchableOpacity style={styles.selectBox} onPress={() => setCategoryPickerOpen(true)}>
-                <Text style={styles.selectBoxText}>
-                  {form.categoryId ? getCategoryPathLabel(categories, form.categoryId) : 'بنر عام (يظهر في كل مكان)'}
-                </Text>
-                <LinkIcon size={16} color={colors.textMuted} />
-              </TouchableOpacity>
-              <Text style={styles.hint}>
-                اربط هذا البنر بقسم معيّن (مثل «إلكترونيات») ليظهر فقط عند تصفح ذلك القسم، أو
-                اتركه بدون ربط ليظهر بشكل عام في كل مكان مطابق لـ«مكان الظهور» أعلاه.
-              </Text>
-
               <Text style={styles.fieldLabel}>نص الزر</Text>
               <TextInputArabic
                 style={styles.input}
@@ -592,16 +559,6 @@ export default function AdminBannersScreen() {
           </View>
         </View>
       </Modal>
-
-      <CategoryPickerModal
-        visible={categoryPickerOpen}
-        categories={categories}
-        value={form.categoryId}
-        onSelect={(id) => setField('categoryId', id)}
-        onClose={() => setCategoryPickerOpen(false)}
-        title="اربط البنر بقسم / تصنيف"
-        noneLabel="بنر عام (بدون ربط)"
-      />
 
       {!loading ? (
         <TouchableOpacity style={styles.fab} onPress={openCreate} activeOpacity={0.85}>
@@ -793,18 +750,6 @@ const styles = StyleSheet.create({
   inputMultiline: { minHeight: 76, textAlignVertical: 'top' },
   row2: { flexDirection: 'row', gap: spacing.sm },
   hint: { ...typography.caption, color: colors.textMuted, marginTop: spacing.xs },
-  selectBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    backgroundColor: colors.background,
-  },
-  selectBoxText: { ...typography.body, color: colors.text, flex: 1 },
   preview: {
     width: '100%',
     height: 150,

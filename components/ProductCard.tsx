@@ -1,5 +1,4 @@
-import { useEffect, useState } from 'react';
-import { TouchableOpacity, View, Text, Image, StyleSheet } from 'react-native';
+import { TouchableOpacity, View, Text, Image, StyleSheet, useEffect, useState } from 'react-native';
 import { Heart, Star } from 'lucide-react-native';
 import { colors, spacing, radius, typography, shadows } from '@/lib/theme';
 import { useWishlist } from '@/lib/WishlistContext';

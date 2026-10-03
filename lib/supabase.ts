@@ -200,7 +200,6 @@ export type Banner = {
   cta_text: string | null;
   cta_link: string | null;
   placement: string;
-  category_id?: string | null;
   sort_order: number;
   is_active: boolean;
 };

@@ -359,7 +359,7 @@ export default function ProductDetailScreen() {
    * تسجيل الدخول / إنشاء حساب، وبعد نجاح العملية يعود إلى نفس المنتج
    * ويبقى مربوطاً بالناشر (كود الأفلييت محفوظ في AsyncStorage + في الرابط).
    */
-  const goToAuthWithReturn = async (intent: 'cart' | 'buy' | 'chat') => {
+  const goToAuthWithReturn = async (intent: 'cart' | 'buy') => {
     const refCode = typeof ref === 'string' && ref ? ref : null;
     try {
       if (refCode) await AsyncStorage.setItem('affiliate_ref', refCode);
